@@ -1,0 +1,346 @@
+@border-on-chart: #ddd;
+@text-color-dark-lower-contrast: rgba(0, 0, 0, 0.33);
+
+@red:   #C4434B;
+@green: #66AC3F;
+@blue:  #3098d8;
+
+@gray-light:    #e5eaef;
+@gray-lightest: #f6f8f9;
+
+@selection-color: #EFBE2C;
+@highlight-color: @green;
+
+// ------------------------------------------
+// Borrowed bootstrap mixins
+
+.pull-right {
+  float: right !important;
+}
+.pull-left {
+  float: left !important;
+}
+
+.clearfix() {
+  &:before,
+  &:after {
+    content: " "; // 1
+    display: table; // 2
+  }
+  &:after {
+    clear: both;
+  }
+}
+
+// End of mixins
+// ------------------------------------------
+
+.organogram {
+  .chartContainer svg {
+    display: block; // Remove odd whitespce
+    background: @gray-lightest asset-url('grid-bg.svg') -3px -3px;
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .chartContainer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 0;
+  }
+
+  // ------------------------------------------
+  // SVG styles start here
+
+  .chartArea {
+    height: 100%;
+
+    .element.html {
+      rect {
+        stroke-width: 1;
+        stroke: #ccc;
+      }
+
+      .country {
+        font-size: 10px;
+        fill: @text-color-dark-lower-contrast;
+      }
+
+      &.highlighted {
+        outline: 0 solid @highlight-color;
+      }
+
+      &.highlighted rect {
+        stroke: @highlight-color;
+        stroke-width: 3;
+      }
+
+      &.highlighted .icon path {
+        fill: @highlight-color;
+      }
+
+      &.highlighted.nolink rect {
+        stroke: @red;
+      }
+
+      &.highlighted.nolink .icon path {
+        fill: @red;
+      }
+
+      &.source-view rect {
+        stroke: @highlight-color;
+        stroke-width: 3;
+      }
+
+      &.source-view.nolink rect {
+        stroke: @red;
+      }
+
+      &.selected rect {
+        stroke: @selection-color;
+        stroke-width: 2;
+      }
+
+      &.selected .icon path {
+        fill: @selection-color;
+      }
+
+      .remove-element .cross {
+        stroke: black;
+        stroke-width: 2;
+        stroke-linecap: round;
+      }
+
+      .connection-port {
+        cursor: crosshair;
+      }
+
+      .connection-port circle.outer {
+        stroke-width: 2;
+        stroke: black;
+        fill: white;
+      }
+
+      .connection-port circle.inner {
+        fill: black;
+      }
+
+      .remove-element {
+        opacity: 0;
+        transition: all linear 0.1s;
+      }
+
+      .icon {
+        opacity: 1;
+        transition: all linear 0.1s;
+      }
+
+      &:hover {
+        .remove-element {
+          opacity: 1;
+          transition: all linear 0.1s;
+        }
+        .icon {
+          opacity: 0;
+          transition: all linear 0.1s;
+        }
+      }
+    }
+
+    .link.selected {
+      .connection {
+        stroke: @selection-color;
+        stroke-width: 2px;
+      }
+
+      .marker-target {
+        fill: @selection-color;
+      }
+
+      .marker-vertices {
+        opacity: 1;
+      }
+
+      .marker-vertex {
+        fill: @selection-color;
+      }
+
+      .link-tools {
+        opacity: 1.0;
+      }
+
+      .connection-wrap {
+        cursor: default;
+        opacity: 0;
+      }
+    }
+
+    .connection-wrap {
+      stroke-linecap: butt;
+      stroke-width: 10;
+      cursor: pointer;
+
+      &:hover {
+        opacity: 0.1;
+      }
+    }
+
+    .marker-vertex {
+      fill: #aaaaaa;
+    }
+
+    .tool-remove circle {
+      fill: @red;
+    }
+
+    .marker-arrowheads {
+      display: none;
+    }
+  }
+
+  // End of SVG styles
+  // ------------------------------------------
+}
+
+.graph-tools {
+  & > * {
+    width: 228px;
+  }
+}
+
+.graph-tools .basic {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  height:135px;
+
+  padding: 10px 20px;
+
+  background: rgba(255, 255, 255, 1.0);
+  border: 1px solid @border-on-chart;
+  border-bottom: 0;
+}
+
+.graph-tools .switch {
+  position: absolute;
+  left: 10px;
+  top: 137px;
+  height: 26px;
+  line-height: 24px;
+
+  padding: 0 20px;
+
+  color: @text-color-dark-lower-contrast;
+  font-style: italic;
+
+  background: rgba(235, 235, 235, 1.0);
+  border: 1px solid @border-on-chart;
+  border-top: 0;
+
+  text-decoration: none;
+
+  &:hover {
+    background: rgba(230, 230, 230, 1.0);
+  }
+
+  i {
+    font-size: 130%;
+    margin-top: 5px;
+
+    opacity: 0.7;
+    .pull-right();
+
+    &.rotated {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+.graph-tools .extended {
+  position: absolute;
+  left: 10px;
+  top: 162px;
+  bottom: 10px;
+
+  padding: 10px;
+
+  background: rgba(255, 255, 255, 1.0);
+  border: 1px solid @border-on-chart;
+  border-top-color: rgba(235, 235, 235, 1.0);
+
+  overflow-y: auto;
+}
+
+.graph-tools .fabric {
+  margin-top: 10px;
+
+  .instance-template {
+    margin-bottom: 6px;
+    padding: 7px 5px;
+
+    border: 1px dotted #bbb;
+
+    cursor: move;
+
+    // font-size: 11px;
+    text-transform: uppercase;
+    color: #555;
+
+    i {
+      .pull-left();
+      width: 30px;
+      text-align: center;
+      font-size: 16px;
+      color: #888;
+    }
+
+    .clearfix();
+  }
+
+  .instance-template:hover {
+    border-color: @blue;
+    color: @blue;
+    background: white;
+
+    i { color: @blue; }
+  }
+}
+
+.graph-tools .intro {
+  color: @text-color-dark-lower-contrast;
+  font-style: italic;
+}
+
+.graph-tools .listing {
+  margin-bottom: 10px;
+
+  li {
+    padding: 5px 5px;
+    border: 1px dotted transparent;
+    margin-bottom: -3px;
+
+    i {
+      .pull-left();
+      width: 20px;
+      text-align: center;
+      margin-top: 2px;
+      color: @gray-light;
+    }
+
+    .text {
+      margin-left: 20px;
+    }
+
+    .clearfix();
+  }
+
+  li:hover {
+    cursor: move;
+    border-color: @blue;
+    background: white;
+    color: @blue;
+
+    i { color: @blue; }
+  }
+}
