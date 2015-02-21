@@ -120,7 +120,7 @@ module.exports = function (grunt) {
     cssmin: {
        dist: {
          files: {
-           '<%= yeoman.dist %>/styles/main.css': [
+           '<%= yeoman.dist %>/styles/angular-jointjs-graph.min.css': [
              '.tmp/styles/{,*/}*.css'
            ]
          }
@@ -129,8 +129,8 @@ module.exports = function (grunt) {
     uglify: {
        dist: {
          files: {
-           '<%= yeoman.dist %>/scripts/scripts.js': [
-             '<%= yeoman.dist %>/scripts/scripts.js'
+           '<%= yeoman.dist %>/scripts/angular-jointjs-graph.min.js': [
+             '<%= yeoman.dist %>/scripts/angular-jointjs-graph.js'
            ]
          }
        }
@@ -138,7 +138,7 @@ module.exports = function (grunt) {
     concat: {
       dist: {
         files: {
-          '<%= yeoman.dist %>/scripts/scripts.js': [
+          '<%= yeoman.dist %>/scripts/angular-jointjs-graph.js': [
             '.tmp/scripts/{,*/}*.js',
             '<%= yeoman.app %>/scripts/{,*/}*.js'
           ]
@@ -174,6 +174,12 @@ module.exports = function (grunt) {
         cwd: '<%= yeoman.app %>/styles',
         dest: '.tmp/styles/',
         src: '{,*/}*.css'
+      },
+      stylescompiled: {
+        expand: true,
+        cwd: '.tmp/styles',
+        dest: '<%= yeoman.dist %>/styles/',
+        src: '{,*/}*.css'
       }
     },
 
@@ -200,13 +206,13 @@ module.exports = function (grunt) {
 
     less: {
       development: {
-        files: {'app/styles/main.css': 'app/styles/main.css.less'}
+        files: {'.tmp/styles/angular-jointjs-graph.css': 'app/styles/main.css.less'}
       },
       production: {
         options: {
           cleancss: true
         },
-        files: {'app/styles/main.css': 'app/styles/main.css.less'}
+        files: {'.tmp/styles/angular-jointjs-graph.css': 'app/styles/main.css.less'}
       }
     }
   });
@@ -221,8 +227,7 @@ module.exports = function (grunt) {
     grunt.task.run([
       'clean:server',
       'concurrent:server',
-      'connect:livereload',
-      'watch'
+      'connect:livereload'
     ]);
   });
 
@@ -241,7 +246,7 @@ module.exports = function (grunt) {
   grunt.registerTask('build', [
     'clean:dist',
     'less:production',
-    'concurrent:dist',
+    'copy:stylescompiled',
     'concat',
     'copy:dist',
     'cssmin',
