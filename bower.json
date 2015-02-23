@@ -18,6 +18,13 @@
     "dist/styles/angular-jointjs-graph.css",
     "dist/styles/angular-jointjs-graph.min.css"
   ],
+  "ignore": [
+    ".editorconfig",
+    ".gitattributes",
+    ".jshintrc",
+    "Gruntfile.js",
+    "package.json"
+  ],
   "appPath": "app",
   "moduleName": "angular-jointjs-graph"
 }
