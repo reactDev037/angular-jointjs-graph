@@ -6,7 +6,7 @@
 }
 .organogram .chartContainer svg {
   display: block;
-  background: #f6f8f9 asset-url('grid-bg.svg') -3px -3px;
+  background: #f6f8f9 url('../images/grid-bg.svg') -3px -3px;
   box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.1);
 }
 .organogram .chartContainer {
