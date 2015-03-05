@@ -4,6 +4,7 @@ angular.module('angular-jointjs-graph')
     function() {
       return {
         require: '^graph',
+        scope: true,
         restrict: 'E',
         templateUrl: 'angular-joints-graph/templates/graphSidePanelDetails',
         transclude: true
