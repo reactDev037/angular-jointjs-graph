@@ -1,12 +1,12 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointChartLink', ['$injector', '$q', 'JointLinkDefaults', 'FactoryMap',
-    function($injector, $q, JointLinkDefaults, FactoryMap) {
+  .factory('JointChartLink', ['$injector', '$q', 'JointLinkDefaults', 'JointResourceModel', 'FactoryMap',
+    function($injector, $q, JointLinkDefaults, JointResourceModel, FactoryMap) {
       function getFactory() {
         var factoryName = FactoryMap.get('JointGraphConfig').linkFactory;
 
         if ($injector.has(factoryName)) {
-          return $injector.get(factoryName);
+          return JointResourceModel.forLink($injector.get(factoryName));
         } else {
           throw new Error('The factory required for creating the link model is not defined');
         }

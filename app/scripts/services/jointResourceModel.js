@@ -24,9 +24,9 @@ angular.module('angular-jointjs-graph')
         };
       }
 
-      function createFactoryForExisting(JointModel, Resource, postDataFn, modelUpdateCallback) {
-        if (_.isUndefined(Resource)) {
-          throw new Error('A $resource class object is mandatory argument');
+      function createFactoryForExisting(JointModel, argsFactory) {
+        if (_.isUndefined(argsFactory.resource)) {
+          throw new Error('Entity and link factories must return an object declaring a resource field');
         }
 
         var Model = wrapModel(JointModel);
@@ -35,11 +35,11 @@ angular.module('angular-jointjs-graph')
             postData = {},
             self = this;
 
-          if (_.isFunction(postDataFn)) {
-            postData = postDataFn(this);
+          if (_.isFunction(argsFactory.postDataFn)) {
+            postData = argsFactory.postDataFn(this);
           }
 
-          Resource.save({}, postData, function(response) {
+          argsFactory.resource.save({}, postData, function(response) {
             var params = self.get('backendModelParams');
 
             _.each(params, function(value, key) {
@@ -48,8 +48,8 @@ angular.module('angular-jointjs-graph')
               }
             });
 
-            if (modelUpdateCallback) {
-              modelUpdateCallback(self, response);
+            if (_.isFunction(argsFactory.modelUpdateCallback)) {
+              argsFactory.modelUpdateCallback(self, response);
             }
 
             deferred.resolve(response);
@@ -67,11 +67,11 @@ angular.module('angular-jointjs-graph')
         forExistingEntity: function() {
           return new Factory(wrapModel(JointNodeModel));
         },
-        forNewEntity: function(Resource, postDataFn, modelUpdateCallback) {
-          return createFactoryForExisting(JointNodeModel, Resource, postDataFn, modelUpdateCallback);
+        forNewEntity: function(argsFactory) {
+          return createFactoryForExisting(JointNodeModel, argsFactory);
         },
-        forLink: function(Resource, postDataFn, modelUpdateCallback) {
-          return createFactoryForExisting(JointLinkModel, Resource, postDataFn, modelUpdateCallback);
+        forLink: function(argsFactory) {
+          return createFactoryForExisting(JointLinkModel, argsFactory);
         }
       };
     }
