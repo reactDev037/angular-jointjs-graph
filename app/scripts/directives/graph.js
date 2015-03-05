@@ -71,8 +71,10 @@ angular.module('angular-jointjs-graph')
                   }
                 });
 
-                if ($scope.graph.cells) {
-                  _.each($scope.graph.cells, function (element) {
+                var graphContent = JSON.parse($scope.graph.content);
+
+                if (graphContent.cells) {
+                  _.each(graphContent.cells, function (element) {
                     if (element.isChartNode) {
                       var properties = {};
                       properties[modelIdKey] = element.backendModelParams[modelIdKey];
@@ -80,7 +82,7 @@ angular.module('angular-jointjs-graph')
                     }
                   });
 
-                  JointGraph.addCells($scope.graph.cells);
+                  JointGraph.addCells(graphContent.cells);
                 }
               }, function (error) {
                 $scope.$emit('applicationError', { errData: error });
