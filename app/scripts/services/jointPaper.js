@@ -1,9 +1,9 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .service('JointPaper', ['$window', 'JointGraph', 'JointGraphConfig',
-    function($window, jointGraph, JointGraphConfig) {
+  .factory('JointPaper', ['$window', 'JointGraph', 'FactoryMap',
+    function($window, JointGraph, FactoryMap) {
       var paper,
-        selectedModelId;
+          selectedModelId;
 
       return {
         init: function($element) {
@@ -12,7 +12,7 @@ angular.module('angular-jointjs-graph')
             width: '100%',
             height: '100%',
             gridSize: 1,
-            model: jointGraph,
+            model: JointGraph,
             interactive: { vertexAdd: false },
             perpendicularLinks: true
           });
@@ -22,7 +22,7 @@ angular.module('angular-jointjs-graph')
         },
         clearSelection: function() {
           if (selectedModelId) {
-            var cell = jointGraph.getCell(selectedModelId);
+            var cell = JointGraph.getCell(selectedModelId);
 
             if (cell) {
               var view = paper.findViewByModel(cell);
@@ -38,7 +38,7 @@ angular.module('angular-jointjs-graph')
 
           var backendModelParams = cellView.model.get('backendModelParams'),
             isChartNode = cellView.model.get('isChartNode') ? true : false,
-            modelIdKey = JointGraphConfig.modelIdKey || 'id',
+            modelIdKey = FactoryMap.get('JointGraphConfig').modelIdKey || 'id',
             backendModelId = backendModelParams[modelIdKey];
 
           return { backendModelId: backendModelId, selectedCellId: selectedModelId, isChartNode: isChartNode };

@@ -1,9 +1,10 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointChartLink', ['$injector', '$q', 'JointGraphConfig', 'JointLinkDefaults',
-    function($injector, $q, JointGraphConfig, JointLinkDefaults) {
+  .factory('JointChartLink', ['$injector', '$q', 'JointLinkDefaults', 'FactoryMap',
+    function($injector, $q, JointLinkDefaults, FactoryMap) {
       function getFactory() {
-        var factoryName = JointGraphConfig.linkFactory;
+        var factoryName = FactoryMap.get('JointGraphConfig').linkFactory;
+
         if ($injector.has(factoryName)) {
           return $injector.get(factoryName);
         } else {
@@ -12,8 +13,9 @@ angular.module('angular-jointjs-graph')
       }
 
       function getProperties() {
-        var modelIdKey = JointGraphConfig.modelIdKey,
-          properties = JointGraphConfig.linkModelProperties;
+        var Config = FactoryMap.get('JointGraphConfig'),
+            modelIdKey = Config.modelIdKey,
+            properties = Config.linkModelProperties;
 
         if (properties) {
           properties.push(modelIdKey);
@@ -26,7 +28,7 @@ angular.module('angular-jointjs-graph')
       return {
         create: function(params) {
           var Factory = getFactory(),
-            backendModelParams = {};
+              backendModelParams = {};
 
           _.each(getProperties(), function(prop) {
             backendModelParams[prop] = undefined;

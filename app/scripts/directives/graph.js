@@ -1,18 +1,21 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .directive('graph', ['JointGraph', 'JointChartNode', 'JointElementView', 'JointNodeModel', 'JointPaper', 'JointGraphConfig', 'JointNodeParams', '$q',
-    function(JointGraph, JointChartNode, JointElementView, JointNodeModel, JointPaper, JointGraphConfig, JointNodeParams, $q) {
+  .directive('graph', ['JointGraph', 'JointChartNode', 'JointElementView', 'JointNodeModel', 'JointPaper', 'JointNodeParams', 'FactoryMap', '$q',
+    function(JointGraph, JointChartNode, JointElementView, JointNodeModel, JointPaper, JointNodeParams, FactoryMap, $q) {
       return {
         restrict: 'E',
         templateUrl: 'angular-joints-graph/templates/graph',
         transclude: true,
-        controller: ['$scope', '$element',
-          function($scope, $element) {
-            var modelIdKey = JointGraphConfig.modelIdKey || 'id',
-              self = this;
+        controller: ['$scope', '$element', '$attrs',
+          function($scope, $element, $attrs) {
+            FactoryMap.register($attrs.configFactory, 'JointGraphConfig');
+
+            var Config = FactoryMap.get('JointGraphConfig'),
+                modelIdKey = Config.modelIdKey || 'id',
+                self = this;
 
             this.entityModelProperties = function() {
-              var properties = JointGraphConfig.entityModelProperties;
+              var properties = Config.entityModelProperties;
 
               if (properties) {
                 properties.push(modelIdKey);
