@@ -1,14 +1,12 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointChartNode', ['$injector', 'JointResourceModel',
-    function($injector, JointResourceModel) {
+  .factory('JointChartNode', ['$injector', 'JointResourceModel', 'FactoryMap',
+    function($injector, JointResourceModel, FactoryMap) {
       function getFactory(entityAttributes) {
-        var factoryName = entityAttributes.factory;
-        if ($injector.has(factoryName)) {
-          delete entityAttributes.factory;
-          return JointResourceModel.forNewEntity($injector.get(factoryName));
+        if (entityAttributes.entityIdentifier) {
+          return JointResourceModel.forNewEntity(FactoryMap.get(entityAttributes.entityIdentifier));
         } else {
-          throw new Error('The factory required for creating the entity model is not defined');
+          return JointResourceModel.forExistingEntity();
         }
       }
 

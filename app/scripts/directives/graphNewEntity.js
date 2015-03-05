@@ -17,9 +17,7 @@ angular.module('angular-jointjs-graph')
             });
           }
 
-          if ($attrs.factory) {
-            element.dataset.factory = $attrs.factory;
-          }
+          element.dataset.entityIdentifier = $attrs.entityIdentifier;
 
           $transclude($scope, function (clone) {
             $element.children().first().append(clone);

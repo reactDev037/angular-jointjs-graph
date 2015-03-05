@@ -2,16 +2,6 @@
 angular.module('angular-jointjs-graph')
   .factory('JointChartLink', ['$injector', '$q', 'JointLinkDefaults', 'JointResourceModel', 'FactoryMap',
     function($injector, $q, JointLinkDefaults, JointResourceModel, FactoryMap) {
-      function getFactory() {
-        var factoryName = FactoryMap.get('JointGraphConfig').linkFactory;
-
-        if ($injector.has(factoryName)) {
-          return JointResourceModel.forLink($injector.get(factoryName));
-        } else {
-          throw new Error('The factory required for creating the link model is not defined');
-        }
-      }
-
       function getProperties() {
         var Config = FactoryMap.get('JointGraphConfig'),
             modelIdKey = Config.modelIdKey,
@@ -27,7 +17,7 @@ angular.module('angular-jointjs-graph')
 
       return {
         create: function(params) {
-          var Factory = getFactory(),
+          var Factory = JointResourceModel.forLink(FactoryMap.get('LinkFactory')),
               backendModelParams = {};
 
           _.each(getProperties(), function(prop) {

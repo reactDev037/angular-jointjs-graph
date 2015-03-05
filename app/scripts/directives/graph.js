@@ -14,6 +14,12 @@ angular.module('angular-jointjs-graph')
                 modelIdKey = Config.modelIdKey || 'id',
                 self = this;
 
+            FactoryMap.register(Config.linkFactory, 'LinkFactory');
+
+            _.each(Config.entityFactories, function(value, key) {
+              FactoryMap.register(value, key);
+            });
+
             this.entityModelProperties = function() {
               var properties = Config.entityModelProperties;
 
@@ -71,7 +77,7 @@ angular.module('angular-jointjs-graph')
                   }
                 });
 
-                var graphContent = JSON.parse($scope.graph.content);
+                var graphContent = JSON.parse($scope.graph.content) || {};
 
                 if (graphContent.cells) {
                   _.each(graphContent.cells, function (element) {

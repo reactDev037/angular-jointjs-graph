@@ -19,8 +19,6 @@ angular.module('angular-jointjs-graph')
             });
           }
 
-          liElement.dataset.factory = 'JointExistingModel';
-
           $controller[1].transclude($scope, function(clone) {
             $element.append(clone);
           });
