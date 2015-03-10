@@ -61,7 +61,7 @@ angular.module('angular-jointjs-graph/templates', [])
       );
 
       $templateCache.put('angular-joints-graph/templates/graphExistingEntities',
-        '<li ng-repeat="entity in existingEntities" ng-show="entity.show" draggable graph-existing-entity></li>'
+        '<li ng-repeat="entity in existingEntities" ng-hide="entity.show == false" draggable graph-existing-entity></li>'
       );
     }
   ]);
@@ -139,19 +139,28 @@ angular.module('angular-jointjs-graph')
 
 'use strict';
 angular.module('angular-jointjs-graph')
-  .directive('graph', ['JointGraph', 'JointChartNode', 'JointElementView', 'JointNodeModel', 'JointPaper', 'JointGraphConfig', 'JointNodeParams', '$q',
-    function(JointGraph, JointChartNode, JointElementView, JointNodeModel, JointPaper, JointGraphConfig, JointNodeParams, $q) {
+  .directive('graph', ['JointGraph', 'JointChartNode', 'JointElementView', 'JointNodeModel', 'JointPaper', 'JointNodeParams', 'FactoryMap', '$q',
+    function(JointGraph, JointChartNode, JointElementView, JointNodeModel, JointPaper, JointNodeParams, FactoryMap, $q) {
       return {
         restrict: 'E',
         templateUrl: 'angular-joints-graph/templates/graph',
         transclude: true,
-        controller: ['$scope', '$element',
-          function($scope, $element) {
-            var modelIdKey = JointGraphConfig.modelIdKey || 'id',
-              self = this;
+        controller: ['$scope', '$element', '$attrs',
+          function($scope, $element, $attrs) {
+            FactoryMap.register($attrs.configFactory, 'JointGraphConfig');
+
+            var Config = FactoryMap.get('JointGraphConfig'),
+                modelIdKey = Config.modelIdKey || 'id',
+                self = this;
+
+            FactoryMap.register(Config.linkFactory, 'LinkFactory');
+
+            _.each(Config.entityFactories, function(value, key) {
+              FactoryMap.register(value, key);
+            });
 
             this.entityModelProperties = function() {
-              var properties = JointGraphConfig.entityModelProperties;
+              var properties = Config.entityModelProperties;
 
               if (properties) {
                 properties.push(modelIdKey);
@@ -207,8 +216,10 @@ angular.module('angular-jointjs-graph')
                   }
                 });
 
-                if ($scope.graph.cells) {
-                  _.each($scope.graph.cells, function (element) {
+                var graphContent = JSON.parse($scope.graph.content) || {};
+
+                if (graphContent.cells) {
+                  _.each(graphContent.cells, function (element) {
                     if (element.isChartNode) {
                       var properties = {};
                       properties[modelIdKey] = element.backendModelParams[modelIdKey];
@@ -216,7 +227,7 @@ angular.module('angular-jointjs-graph')
                     }
                   });
 
-                  JointGraph.addCells($scope.graph.cells);
+                  JointGraph.addCells(graphContent.cells);
                 }
               }, function (error) {
                 $scope.$emit('applicationError', { errData: error });
@@ -462,8 +473,6 @@ angular.module('angular-jointjs-graph')
             });
           }
 
-          liElement.dataset.factory = 'JointExistingModel';
-
           $controller[1].transclude($scope, function(clone) {
             $element.append(clone);
           });
@@ -491,9 +500,7 @@ angular.module('angular-jointjs-graph')
             });
           }
 
-          if ($attrs.factory) {
-            element.dataset.factory = $attrs.factory;
-          }
+          element.dataset.entityIdentifier = $attrs.entityIdentifier;
 
           $transclude($scope, function (clone) {
             $element.children().first().append(clone);
@@ -511,6 +518,7 @@ angular.module('angular-jointjs-graph')
     function() {
       return {
         require: '^graph',
+        scope: true,
         restrict: 'E',
         templateUrl: 'angular-joints-graph/templates/graphSidePanelDetails',
         transclude: true
@@ -550,20 +558,33 @@ angular.module('angular-jointjs-graph')
 
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointChartLink', ['$injector', '$q', 'JointGraphConfig', 'JointLinkDefaults',
-    function($injector, $q, JointGraphConfig, JointLinkDefaults) {
-      function getFactory() {
-        var factoryName = JointGraphConfig.linkFactory;
-        if ($injector.has(factoryName)) {
-          return $injector.get(factoryName);
-        } else {
-          throw new Error('The factory required for creating the link model is not defined');
-        }
-      }
+  .factory('FactoryMap', ['$injector',
+    function($injector) {
+      var factoriesMap = {};
 
+      return {
+        register: function(factoryName, alias) {
+          if ($injector.has(factoryName)) {
+            factoriesMap[alias || factoryName] = factoryName;
+          } else {
+            throw new Error('Factory ' + factoryName + ' is not registered with any loaded module.' );
+          }
+        },
+        get: function(nameOrAlias) {
+          return $injector.get(factoriesMap[nameOrAlias], null);
+        }
+      };
+    }
+  ]);
+
+'use strict';
+angular.module('angular-jointjs-graph')
+  .factory('JointChartLink', ['$injector', '$q', 'JointLinkDefaults', 'JointResourceModel', 'FactoryMap',
+    function($injector, $q, JointLinkDefaults, JointResourceModel, FactoryMap) {
       function getProperties() {
-        var modelIdKey = JointGraphConfig.modelIdKey,
-          properties = JointGraphConfig.linkModelProperties;
+        var Config = FactoryMap.get('JointGraphConfig'),
+            modelIdKey = Config.modelIdKey,
+            properties = Config.linkModelProperties;
 
         if (properties) {
           properties.push(modelIdKey);
@@ -575,8 +596,8 @@ angular.module('angular-jointjs-graph')
 
       return {
         create: function(params) {
-          var Factory = getFactory(),
-            backendModelParams = {};
+          var Factory = JointResourceModel.forLink(FactoryMap.get('LinkFactory')),
+              backendModelParams = {};
 
           _.each(getProperties(), function(prop) {
             backendModelParams[prop] = undefined;
@@ -596,15 +617,13 @@ angular.module('angular-jointjs-graph')
 
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointChartNode', ['$injector',
-    function($injector) {
+  .factory('JointChartNode', ['$injector', 'JointResourceModel', 'FactoryMap',
+    function($injector, JointResourceModel, FactoryMap) {
       function getFactory(entityAttributes) {
-        var factoryName = entityAttributes.factory;
-        if ($injector.has(factoryName)) {
-          delete entityAttributes.factory;
-          return $injector.get(factoryName);
+        if (entityAttributes.entityIdentifier) {
+          return JointResourceModel.forNewEntity(FactoryMap.get(entityAttributes.entityIdentifier));
         } else {
-          throw new Error('The factory required for creating the entity model is not defined');
+          return JointResourceModel.forExistingEntity();
         }
       }
 
@@ -752,14 +771,6 @@ angular.module('angular-jointjs-graph')
           initElementView($container);
         }
       };
-    }
-  ]);
-
-'use strict';
-angular.module('angular-jointjs-graph')
-  .factory('JointExistingModel', ['JointResourceModel',
-    function(JointResourceModel) {
-      return JointResourceModel.forExistingEntity();
     }
   ]);
 
@@ -969,10 +980,10 @@ angular.module('angular-jointjs-graph')
 
 'use strict';
 angular.module('angular-jointjs-graph')
-  .service('JointPaper', ['$window', 'JointGraph', 'JointGraphConfig',
-    function($window, jointGraph, JointGraphConfig) {
+  .factory('JointPaper', ['$window', 'JointGraph', 'FactoryMap',
+    function($window, JointGraph, FactoryMap) {
       var paper,
-        selectedModelId;
+          selectedModelId;
 
       return {
         init: function($element) {
@@ -981,7 +992,7 @@ angular.module('angular-jointjs-graph')
             width: '100%',
             height: '100%',
             gridSize: 1,
-            model: jointGraph,
+            model: JointGraph,
             interactive: { vertexAdd: false },
             perpendicularLinks: true
           });
@@ -991,7 +1002,7 @@ angular.module('angular-jointjs-graph')
         },
         clearSelection: function() {
           if (selectedModelId) {
-            var cell = jointGraph.getCell(selectedModelId);
+            var cell = JointGraph.getCell(selectedModelId);
 
             if (cell) {
               var view = paper.findViewByModel(cell);
@@ -1007,7 +1018,7 @@ angular.module('angular-jointjs-graph')
 
           var backendModelParams = cellView.model.get('backendModelParams'),
             isChartNode = cellView.model.get('isChartNode') ? true : false,
-            modelIdKey = JointGraphConfig.modelIdKey || 'id',
+            modelIdKey = FactoryMap.get('JointGraphConfig').modelIdKey || 'id',
             backendModelId = backendModelParams[modelIdKey];
 
           return { backendModelId: backendModelId, selectedCellId: selectedModelId, isChartNode: isChartNode };
@@ -1077,9 +1088,9 @@ angular.module('angular-jointjs-graph')
         };
       }
 
-      function createFactoryForExisting(JointModel, Resource, postDataFn, modelUpdateCallback) {
-        if (_.isUndefined(Resource)) {
-          throw new Error('A $resource class object is mandatory argument');
+      function createFactoryForExisting(JointModel, argsFactory) {
+        if (_.isUndefined(argsFactory.resource)) {
+          throw new Error('Entity and link factories must return an object declaring a resource field');
         }
 
         var Model = wrapModel(JointModel);
@@ -1088,11 +1099,11 @@ angular.module('angular-jointjs-graph')
             postData = {},
             self = this;
 
-          if (_.isFunction(postDataFn)) {
-            postData = postDataFn(this);
+          if (_.isFunction(argsFactory.postDataFn)) {
+            postData = argsFactory.postDataFn(this);
           }
 
-          Resource.save({}, postData, function(response) {
+          argsFactory.resource.save({}, postData, function(response) {
             var params = self.get('backendModelParams');
 
             _.each(params, function(value, key) {
@@ -1101,8 +1112,8 @@ angular.module('angular-jointjs-graph')
               }
             });
 
-            if (modelUpdateCallback) {
-              modelUpdateCallback(self, response);
+            if (_.isFunction(argsFactory.modelUpdateCallback)) {
+              argsFactory.modelUpdateCallback(self, response);
             }
 
             deferred.resolve(response);
@@ -1120,11 +1131,11 @@ angular.module('angular-jointjs-graph')
         forExistingEntity: function() {
           return new Factory(wrapModel(JointNodeModel));
         },
-        forNewEntity: function(Resource, postDataFn, modelUpdateCallback) {
-          return createFactoryForExisting(JointNodeModel, Resource, postDataFn, modelUpdateCallback);
+        forNewEntity: function(argsFactory) {
+          return createFactoryForExisting(JointNodeModel, argsFactory);
         },
-        forLink: function(Resource, postDataFn, modelUpdateCallback) {
-          return createFactoryForExisting(JointLinkModel, Resource, postDataFn, modelUpdateCallback);
+        forLink: function(argsFactory) {
+          return createFactoryForExisting(JointLinkModel, argsFactory);
         }
       };
     }
