@@ -597,10 +597,11 @@ angular.module('angular-jointjs-graph')
       return {
         create: function(params) {
           var Factory = JointResourceModel.forLink(FactoryMap.get('LinkFactory')),
-              backendModelParams = {};
+              backendModelParams = {},
+              properties = getProperties();
 
-          _.each(getProperties(), function(prop) {
-            backendModelParams[prop] = undefined;
+          _.each(properties, function(prop) {
+            backendModelParams[prop] = 'undefined';
           });
 
           var defaults = {
