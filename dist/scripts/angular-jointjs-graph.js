@@ -218,11 +218,16 @@ angular.module('angular-jointjs-graph')
 
                 var graphContent = JSON.parse($scope.graph.content) || {};
 
+                $scope.entityJointModelMap = {};
+
                 if (graphContent.cells) {
                   _.each(graphContent.cells, function (element) {
                     if (element.isChartNode) {
-                      var properties = {};
-                      properties[modelIdKey] = element.backendModelParams[modelIdKey];
+                      var properties = {},
+                          entityKey = element.backendModelParams[modelIdKey];
+
+                      properties[modelIdKey] = entityKey;
+                      $scope.entityJointModelMap[entityKey] = element.id;
                       _.findWhere($scope.existingEntities, properties).show = false;
                     }
                   });
@@ -286,6 +291,14 @@ angular.module('angular-jointjs-graph')
               }
             };
 
+            $scope.selectEntity = function(entity) {
+              handleSelection({
+                backendModelId: entity[modelIdKey],
+                selectedCellId: $scope.entityJointModelMap[entity[modelIdKey]],
+                isChartNode: true
+              });
+            };
+
             function handleSelection(selectedIds) {
               $scope.revertEntity();
 
@@ -339,11 +352,13 @@ angular.module('angular-jointjs-graph')
               event.preventDefault();
 
               $scope.$apply(function() {
-                var properties = {};
-                properties[modelIdKey] = model.get('backendModelParams')[modelIdKey];
+                var properties = {},
+                    entityKey = model.get('backendModelParams')[modelIdKey];
+
+                properties[modelIdKey] = entityKey;
 
                 var resource = _.findWhere($scope.existingEntities, properties),
-                  selectedResource = $scope.selection ? $scope.selection.selectedResource : null;
+                    selectedResource = $scope.selection ? $scope.selection.selectedResource : null;
 
                 if (resource) {
                   resource.$remove().then(function() {
@@ -352,6 +367,7 @@ angular.module('angular-jointjs-graph')
                     }
 
                     resource.show = true;
+                    delete $scope.entityJointModelMap[entityKey];
                     $scope.saveGraph();
                   }, function(errData) {
                     $scope.$emit('applicationError', { errData: errData });
@@ -384,11 +400,12 @@ angular.module('angular-jointjs-graph')
 
             function updateResourceList(cellModel) {
               var deferred = $q.defer(),
-                modelId = cellModel.get('backendModelParams')[modelIdKey];
+                  modelId = cellModel.get('backendModelParams')[modelIdKey];
 
               if (modelId === 'undefined') {
                 cellModel.createResource().then(function(resource) {
                   resource.show = false;
+                  $scope.entityJointModelMap[resource[modelIdKey]] = cellModel.id;
                   $scope.existingEntities.unshift(resource);
                   deferred.resolve({ newNode: true });
                 }, function(errData) {
@@ -397,6 +414,8 @@ angular.module('angular-jointjs-graph')
               } else {
                 var properties = {};
                 properties[modelIdKey] = modelId;
+
+                $scope.entityJointModelMap[modelId] = cellModel.id;
 
                 _.findWhere($scope.existingEntities, properties).show = false;
                 deferred.resolve({ newNode: false });
