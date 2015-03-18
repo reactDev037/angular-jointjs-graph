@@ -42,10 +42,12 @@ angular.module('angular-jointjs-graph/templates', [])
             '<div class="intro">Drag to create new</div>\n' +
             '<div class="fabric"></div>\n' +
           '</div>\n' +
-          '<a href="" class="switch" ng-click="toggleExtended()">\n' +
-            'or choose from existing\n' +
-            '<i class="ce-icon-caret-down" ng-class="showExtended ? \'rotated\' : \'\'"></i>\n' +
-          '</a>\n' +
+          '<div class="switch-container" ng-click="toggleExtended()" extended="{{showExtended}}">\n' +
+            '<div class="switch">\n' +
+              'or choose from existing\n' +
+              '<i class="ce-icon-caret-down" ng-class="showExtended ? \'rotated\' : \'\'"></i>\n' +
+            '</div>\n' +
+          '</div>' +
           '<div class="extended" ng-show="showExtended">\n' +
             '<ul class="listing"></ul>\n' +
           '</div>\n' +
