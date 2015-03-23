@@ -1,10 +1,10 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointChartLink', ['$injector', '$q', 'JointLinkDefaults', 'JointResourceModel', 'FactoryMap',
-    function($injector, $q, JointLinkDefaults, JointResourceModel, FactoryMap) {
+  .factory('JointChartLink', ['$injector', '$q', 'JointLinkDefaults', 'JointResourceModel', 'FactoryMap', 'GraphHelpers',
+    function($injector, $q, JointLinkDefaults, JointResourceModel, FactoryMap, GraphHelpers) {
       function getProperties() {
         var Config = FactoryMap.get('JointGraphConfig'),
-            modelIdKey = Config.modelIdKey,
+            modelIdKey = GraphHelpers.getModelIdKey(),
             properties = Config.linkModelProperties;
 
         if (properties) {
@@ -27,7 +27,7 @@ angular.module('angular-jointjs-graph')
 
           var defaults = {
             backendModelParams: backendModelParams,
-            attrs: JointLinkDefaults.newLinkAttributes,
+            attrs: JointLinkDefaults.get().newLinkAttributes,
             isChartNode: false
           };
 

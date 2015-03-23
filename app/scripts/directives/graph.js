@@ -1,184 +1,91 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .directive('graph', ['JointGraph', 'JointChartNode', 'JointElementView', 'JointNodeModel', 'JointPaper', 'JointNodeParams', 'FactoryMap', '$q',
-    function(JointGraph, JointChartNode, JointElementView, JointNodeModel, JointPaper, JointNodeParams, FactoryMap, $q) {
+  .directive('graph', ['JointGraph', 'JointChartNode', 'JointElementView', 'JointNodeModel', 'JointPaper', '$q', 'GraphHelpers', 'GraphEntities', 'GraphLinks', 'GraphSelection', 'FactoryMap',
+    function(JointGraph, JointChartNode, JointElementView, JointNodeModel, JointPaper, $q, GraphHelpers, GraphEntities, GraphLinks, GraphSelection, FactoryMap) {
       return {
         restrict: 'E',
         templateUrl: 'angular-joints-graph/templates/graph',
         transclude: true,
         controller: ['$scope', '$element', '$attrs',
           function($scope, $element, $attrs) {
-            FactoryMap.register($attrs.configFactory, 'JointGraphConfig');
-
-            var Config = FactoryMap.get('JointGraphConfig'),
-                modelIdKey = Config.modelIdKey || 'id',
-                self = this;
-
-            FactoryMap.register(Config.linkFactory, 'LinkFactory');
-
-            _.each(Config.entityFactories, function(value, key) {
-              FactoryMap.register(value, key);
-            });
-
-            this.entityModelProperties = function() {
-              var properties = Config.entityModelProperties;
-
-              if (properties) {
-                properties.push(modelIdKey);
-                return properties;
-              } else {
-                return [modelIdKey];
-              }
-            };
-
             $scope.$on('graphResources', function(event, data) {
               var GraphClass = data.graph,
-                EntitiesClass = data.entities,
-                EntityRelationsClass = data.entityRelations,
-                graphResource = new GraphClass(),
-                successDeferred = $q.defer();
+                  graphResource = new GraphClass();
 
-              graphResource.$get().then(function (graph) {
+              graphResource.$get().then(function(graph) {
                 $scope.graph = graph;
-                EntitiesClass.query(function (entities) {
-                  $scope.existingEntities = entities;
-                  EntityRelationsClass.query(function (entityRelations) {
-                    $scope.existingConnections = entityRelations;
-                    successDeferred.resolve();
-                  }, function (errData) {
-                    successDeferred.reject(errData);
-                  });
-                }, function (errData) {
-                  successDeferred.reject(errData);
-                });
-              }, function (errData) {
-                successDeferred.reject(errData);
-              });
-
-              successDeferred.promise.then(function () {
-                JointNodeModel.init($scope);
-                JointElementView.init($element.find('.chartContainer'));
-                JointPaper.init($element.find('.chartArea'));
-                JointPaper.onSelectionChange(function (ids) {
-                  handleSelection(ids);
-                  $scope.$digest();
-                });
-                JointPaper.onCellPositionChange(function () {
-                  $scope.saveGraph();
-                });
-
-                JointGraph.on('add', function (cell) {
-                  if (cell.get('isChartNode')) {
-                    cell.on('createLinkStart', createLinkStart);
-                    cell.on('createLinkEnd', createLinkEnd);
-                    cell.on('nodeRemoved', nodeRemoved);
-                  } else {
-                    cell.on('remove', linkRemoved);
-                  }
-                });
-
-                var graphContent = JSON.parse($scope.graph.content) || {};
-
-                $scope.entityJointModelMap = {};
-
-                if (graphContent.cells) {
-                  _.each(graphContent.cells, function (element) {
-                    if (element.isChartNode) {
-                      var properties = {},
-                          entityKey = element.backendModelParams[modelIdKey];
-
-                      properties[modelIdKey] = entityKey;
-                      $scope.entityJointModelMap[entityKey] = element.id;
-                      _.findWhere($scope.existingEntities, properties).show = false;
-                    }
-                  });
-
-                  JointGraph.addCells(graphContent.cells);
-                }
-              }, function (error) {
+                return $q.all(_.object(_.map(data.entities, function(resource, identifier) {
+                  return [identifier, GraphHelpers.queryResource(resource)];
+                })));
+              }).then(function(entitiesMap) {
+                GraphEntities.set(entitiesMap);
+                $scope.$broadcast('graphEntitiesLoaded', entitiesMap);
+                return GraphHelpers.queryResource(data.entityRelations);
+              }).then(function(entityRelations) {
+                GraphLinks.set(entityRelations);
+                $scope.$broadcast('graphLinksLoaded', entityRelations);
+              }).then(function() {
+                $scope.$broadcast('graphResourcesLoaded');
+                initGraph();
+              }, function(error) {
                 $scope.$emit('applicationError', { errData: error });
               });
             });
 
-            function getEntityModelValues(resource) {
-              var values = {};
-
-              _.each(self.entityModelProperties(), function(propertyKey) {
-                values[propertyKey] = resource[propertyKey];
+            function initGraph() {
+              JointNodeModel.init($scope);
+              JointElementView.init($element.find('.chartContainer'));
+              JointPaper.init($element.find('.chartArea'));
+              JointPaper.onSelectionChange(function (ids) {
+                GraphSelection.select(ids);
+                $scope.$digest();
+              });
+              JointPaper.onCellPositionChange(function () {
+                $scope.saveGraph();
               });
 
-              return values;
+              JointGraph.on('add', function (cell) {
+                if (cell.get('isChartNode')) {
+                  cell.on('createLinkStart', createLinkStart);
+                  cell.on('createLinkEnd', createLinkEnd);
+                  cell.on('nodeRemoved', nodeRemoved);
+                } else {
+                  cell.on('remove', linkRemoved);
+                }
+              });
+
+              addGraphCells();
             }
 
-            function setParamsForSelection() {
-              var cell = JointGraph.getCell($scope.selection.selectedCellId),
-                modelValues = getEntityModelValues($scope.selection.selectedResource);
+            function addGraphCells() {
+              var graphContent = JSON.parse($scope.graph.content) || {};
 
-              if (cell) {
-                cell.attr(JointNodeParams.get(modelValues).attrs);
+              if (graphContent.cells) {
+                _.each(graphContent.cells, function (element) {
+                  if (element.isChartNode) {
+                    GraphEntities.markPresentOnGraph(element);
+                  }
+                });
+
+                JointGraph.addCells(graphContent.cells);
               }
             }
 
-            _.each(this.entityModelProperties(), function(propertyKey) {
-              $scope.$watch('selection.selectedResource.' + propertyKey, function(newValue, oldValue) {
-                if (!oldValue || !$scope.selection) {
-                  return;
-                }
-
-                setParamsForSelection();
-              });
-            });
-
             $scope.clearCellSelectionAndRevert = function() {
-              JointPaper.clearSelection();
-              handleSelection(null);
-            };
-
-            $scope.clearCellSelection = function() {
-              JointPaper.clearSelection();
-              $scope.selection = null;
+              GraphSelection.clearAndRevert();
             };
 
             $scope.revertEntity = function() {
-              if ($scope.selection) {
-                angular.copy($scope.selection.masterResource, $scope.selection.selectedResource);
-                setParamsForSelection();
-              }
+              GraphSelection.revertSelection();
             };
 
             $scope.syncEntity = function() {
-              if ($scope.selection) {
-                angular.copy($scope.selection.selectedResource, $scope.selection.masterResource);
-              }
+              GraphSelection.syncSelection();
             };
 
-            $scope.selectEntity = function(entity) {
-              handleSelection({
-                backendModelId: entity[modelIdKey],
-                selectedCellId: $scope.entityJointModelMap[entity[modelIdKey]],
-                isChartNode: true
-              });
+            $scope.selectEntity = function(entity, identifier) {
+              GraphSelection.selectEntity(entity, identifier);
             };
-
-            function handleSelection(selectedIds) {
-              $scope.revertEntity();
-
-              if (selectedIds) {
-                var properties = {};
-                properties[modelIdKey] = selectedIds.backendModelId;
-                var entity = selectedIds.isChartNode ? _.findWhere($scope.existingEntities, properties) :
-                  _.findWhere($scope.existingConnections, properties);
-
-                $scope.selection = {
-                  isChartNode: selectedIds.isChartNode,
-                  selectedResource: entity,
-                  selectedCellId: selectedIds.selectedCellId,
-                  masterResource: angular.copy(entity)
-                };
-              } else {
-                $scope.selection = null;
-              }
-            }
 
             $scope.saveGraph = function() {
               setTimeout(function() {
@@ -191,7 +98,7 @@ angular.module('angular-jointjs-graph')
 
             function createLinkStart() {
               $scope.$apply(function() {
-                $scope.clearCellSelectionAndRevert();
+                GraphSelection.clearAndRevert();
               });
             }
 
@@ -200,7 +107,7 @@ angular.module('angular-jointjs-graph')
 
               $scope.$apply(function() {
                 link.createResource().then(function(linkEntity) {
-                  $scope.existingConnections.push(linkEntity);
+                  GraphLinks.addSingle(linkEntity);
                   $scope.saveGraph();
                 }, function(data) {
                   $scope.$emit('applicationError', { errData: data });
@@ -213,22 +120,16 @@ angular.module('angular-jointjs-graph')
               event.preventDefault();
 
               $scope.$apply(function() {
-                var properties = {},
-                    entityKey = model.get('backendModelParams')[modelIdKey];
-
-                properties[modelIdKey] = entityKey;
-
-                var resource = _.findWhere($scope.existingEntities, properties),
-                    selectedResource = $scope.selection ? $scope.selection.selectedResource : null;
+                var resource = GraphEntities.getSingle(model),
+                    selectedResource = GraphSelection.getSelectedEntity();
 
                 if (resource) {
                   resource.$remove().then(function() {
                     if (resource === selectedResource) {
-                      $scope.clearCellSelection();
+                      GraphSelection.clear();
                     }
 
-                    resource.show = true;
-                    delete $scope.entityJointModelMap[entityKey];
+                    GraphEntities.markRemovedFromGraph(model);
                     $scope.saveGraph();
                   }, function(errData) {
                     $scope.$emit('applicationError', { errData: errData });
@@ -241,16 +142,11 @@ angular.module('angular-jointjs-graph')
               if (options && options.skipCallbacks) {
                 //Link is removed because of invalid target or removed source/target
               } else {
-                var backendModelParams = cell.get('backendModelParams'),
-                  properties = {},
-                  linkResource;
-
-                properties[modelIdKey] = backendModelParams[modelIdKey];
-                linkResource = _.findWhere($scope.existingConnections, properties);
+                var linkResource = GraphLinks.getSingle(cell);
 
                 if (linkResource) {
                   linkResource.$remove().then(function() {
-                    _.remove($scope.existingConnections, properties);
+                    GraphLinks.remove(cell);
                     $scope.saveGraph();
                   }, function(errData) {
                     $scope.$emit('applicationError', { errData: errData });
@@ -261,24 +157,17 @@ angular.module('angular-jointjs-graph')
 
             function updateResourceList(cellModel) {
               var deferred = $q.defer(),
-                  modelId = cellModel.get('backendModelParams')[modelIdKey];
+                  modelId = cellModel.get('backendModelParams')[GraphHelpers.getModelIdKey()];
 
               if (modelId === 'undefined') {
                 cellModel.createResource().then(function(resource) {
-                  resource.show = false;
-                  $scope.entityJointModelMap[resource[modelIdKey]] = cellModel.id;
-                  $scope.existingEntities.unshift(resource);
+                  GraphEntities.addSingle(cellModel, resource);
                   deferred.resolve({ newNode: true });
                 }, function(errData) {
                   deferred.reject(errData);
                 });
               } else {
-                var properties = {};
-                properties[modelIdKey] = modelId;
-
-                $scope.entityJointModelMap[modelId] = cellModel.id;
-
-                _.findWhere($scope.existingEntities, properties).show = false;
+                GraphEntities.markPresentOnGraph(cellModel);
                 deferred.resolve({ newNode: false });
               }
 
@@ -288,8 +177,13 @@ angular.module('angular-jointjs-graph')
             function highlightCell(cellModel) {
               var cellView = JointPaper.getPaper().findViewByModel(cellModel);
               JointPaper.clearSelection();
-              handleSelection(JointPaper.selectCell(cellView));
+              GraphSelection.select(JointPaper.selectCell(cellView));
             }
+
+            FactoryMap.registerFactories($attrs.configFactory);
+            GraphSelection.onSelectionChange(function(selection) {
+              $scope.$broadcast('graphSelection', selection);
+            });
 
             $scope.handleDrop = function(entityAttributes, dropPoint) {
               $scope.$apply(function() {

@@ -1,7 +1,7 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointLinkDefaults', ['$injector',
-    function($injector) {
+  .factory('JointLinkDefaults', ['FactoryMap',
+    function(FactoryMap) {
       var values = {
         linkConnectionColorAllowed: '#66AC3F',
         linkMarkerColorAllowed: '#66AC3F',
@@ -45,10 +45,10 @@ angular.module('angular-jointjs-graph')
         }
       };
 
-      if ($injector.has('JointLinkParams')) {
-        angular.extend(defaults, values, $injector.get('JointLinkParams'));
-      }
-
-      return defaults;
+      return {
+        get: function() {
+          return angular.extend(defaults, values, FactoryMap.get('JointLinkParams').get());
+        }
+      };
     }
   ]);

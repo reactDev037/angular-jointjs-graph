@@ -1,7 +1,7 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointPaper', ['$window', 'JointGraph', 'FactoryMap',
-    function($window, JointGraph, FactoryMap) {
+  .factory('JointPaper', ['$window', 'JointGraph', 'GraphHelpers',
+    function($window, JointGraph, GraphHelpers) {
       var paper,
           selectedModelId;
 
@@ -38,10 +38,16 @@ angular.module('angular-jointjs-graph')
 
           var backendModelParams = cellView.model.get('backendModelParams'),
             isChartNode = cellView.model.get('isChartNode') ? true : false,
-            modelIdKey = FactoryMap.get('JointGraphConfig').modelIdKey || 'id',
-            backendModelId = backendModelParams[modelIdKey];
+            modelIdKey = GraphHelpers.getModelIdKey(),
+            backendModelId = backendModelParams[modelIdKey],
+            identifier = backendModelParams.entityIdentifier;
 
-          return { backendModelId: backendModelId, selectedCellId: selectedModelId, isChartNode: isChartNode };
+          return {
+            backendModelId: backendModelId,
+            selectedCellId: selectedModelId,
+            isChartNode: isChartNode,
+            entityIdentifier: identifier
+          };
         },
         onSelectionChange: function(callback) {
           var self = this;

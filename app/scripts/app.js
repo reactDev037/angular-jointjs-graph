@@ -63,7 +63,7 @@ angular.module('angular-jointjs-graph/templates', [])
       );
 
       $templateCache.put('angular-joints-graph/templates/graphExistingEntities',
-        '<li ng-repeat="entity in existingEntities" ng-hide="entity.show == false" draggable graph-existing-entity></li>'
+        '<li ng-repeat="entity in entities" ng-hide="entity.show == false" draggable graph-existing-entity="{{entityIdentifier}}"></li>'
       );
     }
   ]);

@@ -1,9 +1,9 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointChartNode', ['$injector', 'JointResourceModel', 'FactoryMap',
-    function($injector, JointResourceModel, FactoryMap) {
+  .factory('JointChartNode', ['$injector', 'JointResourceModel', 'FactoryMap', 'GraphHelpers',
+    function($injector, JointResourceModel, FactoryMap, GraphHelpers) {
       function getFactory(entityAttributes) {
-        if (entityAttributes.entityIdentifier) {
+        if (entityAttributes[GraphHelpers.getModelIdKey()] === 'undefined') {
           return JointResourceModel.forNewEntity(FactoryMap.get(entityAttributes.entityIdentifier));
         } else {
           return JointResourceModel.forExistingEntity();
@@ -20,10 +20,7 @@ angular.module('angular-jointjs-graph')
               isChartNode: true
             };
 
-          if ($injector.has('JointNodeParams')) {
-            var ModelParams = $injector.get('JointNodeParams');
-            angular.extend(params, ModelParams.get(entityAttributes));
-          }
+          angular.extend(params, FactoryMap.get('JointNodeParams').get(entityAttributes));
 
           return Factory.create(params);
         }

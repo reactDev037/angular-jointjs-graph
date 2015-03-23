@@ -1,13 +1,14 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .directive('graphExistingEntity', [
-    function() {
+  .directive('graphExistingEntity', ['GraphHelpers',
+    function(GraphHelpers) {
       return {
-        require: ['^graph', '^graphExistingEntities'],
+        require: '^graphExistingEntities',
         restrict: 'A',
-        link: function($scope, $element, $attrs, $controller) {
-          var modelProperties = $controller[0].entityModelProperties(),
-            liElement = $element[0];
+        link: function($scope, $element, $attrs) {
+          var entityIdentifier = $attrs.graphExistingEntity,
+              modelProperties = GraphHelpers.entityProperties(entityIdentifier),
+              liElement = $element[0];
 
           if (modelProperties) {
             _.each(modelProperties, function(property) {
@@ -19,7 +20,9 @@ angular.module('angular-jointjs-graph')
             });
           }
 
-          $controller[1].transclude($scope, function(clone) {
+          liElement.dataset.entityIdentifier = entityIdentifier;
+
+          $scope.transcludeEntities($scope, function(clone) {
             $element.append(clone);
           });
         }

@@ -4,13 +4,27 @@ angular.module('angular-jointjs-graph')
     function($injector) {
       var factoriesMap = {};
 
+      function registerFactory(factoryName, alias) {
+        if ($injector.has(factoryName)) {
+          factoriesMap[alias || factoryName] = factoryName;
+        } else {
+          throw new Error('Factory ' + factoryName + ' is not registered with any loaded module.' );
+        }
+      }
+
       return {
-        register: function(factoryName, alias) {
-          if ($injector.has(factoryName)) {
-            factoriesMap[alias || factoryName] = factoryName;
-          } else {
-            throw new Error('Factory ' + factoryName + ' is not registered with any loaded module.' );
-          }
+        registerFactories: function(configFactoryName) {
+          registerFactory(configFactoryName, 'JointGraphConfig');
+
+          var Config = $injector.get(configFactoryName);
+
+          registerFactory(Config.linkFactory, 'LinkFactory');
+          registerFactory(Config.entityGraphParamsFactory, 'JointNodeParams');
+          registerFactory(Config.linkGraphParamsFactory, 'JointLinkParams');
+
+          _.each(Config.entityFactories, function(value, key) {
+            registerFactory(value, key);
+          });
         },
         get: function(nameOrAlias) {
           return $injector.get(factoriesMap[nameOrAlias], null);
