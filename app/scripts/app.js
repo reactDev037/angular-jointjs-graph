@@ -45,7 +45,7 @@ angular.module('angular-jointjs-graph/templates', [])
           '<div class="switch-container" ng-click="toggleExtended()" extended="{{showExtended}}">\n' +
             '<div class="switch">\n' +
               'or choose from existing\n' +
-              '<i class="ce-icon-caret-down" ng-class="showExtended ? \'rotated\' : \'\'"></i>\n' +
+              '<span ng-class="showExtended ? \'up\' : \'down\'"></span>\n' +
             '</div>\n' +
           '</div>' +
           '<div class="extended" ng-show="showExtended">\n' +
