@@ -14,16 +14,11 @@ angular.module('angular-jointjs-graph/templates', [])
       );
 
       $templateCache.put('angular-joints-graph/templates/graphNode',
-        '<g class="rotatable">\n' +
+        '<g class="rotatable graph-node-template">\n' +
           '<g class="scalable">\n' +
             '<rect/>\n' +
           '</g>\n' +
-          '<text class="name"/>\n' +
-          '<text class="country"/>\n' +
-          '<g transform="translate(110, 3)">\n' +
-            '<text class="icon beneficiary" style="font-family:ce-icons;"/>\n' +
-            '<text class="icon company" style="font-family:ce-icons;"/>\n' +
-          '</g>\n' +
+          '<g ng-transclude></g>\n' +
           '<a class="connection-port" xlink:href="">\n' +
             '<path d="M0,0 30,0 30,38 0,38" style="fill:white;fill-opacity:0.0;"/>\n' +
             '<circle class="outer" cx="15" cy="19" r="6"/>\n' +

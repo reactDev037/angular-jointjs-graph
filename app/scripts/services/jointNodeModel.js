@@ -1,13 +1,13 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointNodeModel', ['$window', '$compile', '$templateCache',
-    function($window, $compile, $templateCache) {
+  .factory('JointNodeModel', ['$window',
+    function($window) {
       var ModelConstructor;
 
       return {
-        init: function($scope) {
+        init: function(markup) {
           ModelConstructor = $window.joint.shapes.basic.Rect.extend({
-            markup: $compile($templateCache.get('angular-joints-graph/templates/graphNode'))($scope)[0].outerHTML,
+            markup: markup,
             defaults: $window.joint.util.deepSupplement({
               // The corresponding html.ElementView is defined
               // in the JointElementView service.
@@ -23,10 +23,6 @@ angular.module('angular-jointjs-graph')
           };
         },
         getConstructor: function() {
-          if (_.isUndefined(ModelConstructor)) {
-            throw new Error('Factory has not been initialized yet, use init($scope)');
-          }
-
           return ModelConstructor;
         }
       };

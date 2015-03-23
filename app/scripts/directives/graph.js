@@ -33,7 +33,7 @@ angular.module('angular-jointjs-graph')
             });
 
             function initGraph() {
-              JointNodeModel.init($scope);
+              JointNodeModel.init($element.find('.graph-node-template')[0].outerHTML);
               JointElementView.init($element.find('.chartContainer'));
               JointPaper.init($element.find('.chartArea'));
               JointPaper.onSelectionChange(function (ids) {
