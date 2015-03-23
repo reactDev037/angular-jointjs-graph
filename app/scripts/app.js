@@ -21,8 +21,8 @@ angular.module('angular-jointjs-graph/templates', [])
           '<text class="name"/>\n' +
           '<text class="country"/>\n' +
           '<g transform="translate(110, 3)">\n' +
-            '<text class="icon beneficiary" style="font-family:ce-icons;fill:#E5EAEF;"/>\n' +
-            '<text class="icon company" style="font-family:ce-icons;fill:#E5EAEF;"/>\n' +
+            '<text class="icon beneficiary" style="font-family:ce-icons;"/>\n' +
+            '<text class="icon company" style="font-family:ce-icons;"/>\n' +
           '</g>\n' +
           '<a class="connection-port" xlink:href="">\n' +
             '<path d="M0,0 30,0 30,38 0,38" style="fill:white;fill-opacity:0.0;"/>\n' +

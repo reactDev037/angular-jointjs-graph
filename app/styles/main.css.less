@@ -76,16 +76,8 @@
         stroke-width: 3;
       }
 
-      &.highlighted .icon path {
-        fill: @highlight-color;
-      }
-
       &.highlighted.nolink rect {
         stroke: @red;
-      }
-
-      &.highlighted.nolink .icon path {
-        fill: @red;
       }
 
       &.source-view rect {
@@ -100,10 +92,6 @@
       &.selected rect {
         stroke: @selection-color;
         stroke-width: 2;
-      }
-
-      &.selected .icon path {
-        fill: @selection-color;
       }
 
       .remove-element .cross {
@@ -131,18 +119,9 @@
         transition: all linear 0.1s;
       }
 
-      .icon {
-        opacity: 1;
-        transition: all linear 0.1s;
-      }
-
       &:hover {
         .remove-element {
           opacity: 1;
-          transition: all linear 0.1s;
-        }
-        .icon {
-          opacity: 0;
           transition: all linear 0.1s;
         }
       }
