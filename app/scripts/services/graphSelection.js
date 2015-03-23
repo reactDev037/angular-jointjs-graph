@@ -9,10 +9,9 @@ angular.module('angular-jointjs-graph')
         var cell = JointGraph.getCell(selection.selectedCellId);
 
         if (cell) {
-          var entityIdentifier = cell.get('backendModelParams').entityIdentifier,
-            modelValues = {};
+          var modelValues = {};
 
-          _.each(GraphHelpers.entityProperties(entityIdentifier), function(propertyKey) {
+          _.each(GraphHelpers.entityProperties(selection.entityIdentifier), function(propertyKey) {
             modelValues[propertyKey] = selection.selectedResource[propertyKey];
           });
 
@@ -43,7 +42,8 @@ angular.module('angular-jointjs-graph')
               isChartNode: selectedIds.isChartNode,
               selectedResource: entity,
               selectedCellId: selectedIds.selectedCellId,
-              masterResource: angular.copy(entity)
+              masterResource: angular.copy(entity),
+              entityIdentifier: selectedIds.entityIdentifier
             };
           } else {
             selection = null;
