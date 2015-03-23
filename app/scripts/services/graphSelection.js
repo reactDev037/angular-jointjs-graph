@@ -83,8 +83,10 @@ angular.module('angular-jointjs-graph')
         },
         clearAndRevert: function() {
           JointPaper.clearSelection();
-          angular.copy(selection.masterResource, selection.selectedResource);
-          updateSelectedEntity();
+          if (selection) {
+            angular.copy(selection.masterResource, selection.selectedResource);
+            updateSelectedEntity();
+          }
           selection = null;
           notifySelectionChange();
         }
