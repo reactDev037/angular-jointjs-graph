@@ -14,20 +14,16 @@ angular.module('angular-jointjs-graph/templates', [])
       );
 
       $templateCache.put('angular-joints-graph/templates/graphNode',
-        '<g class="rotatable graph-node-template">\n' +
-          '<g class="scalable">\n' +
-            '<rect/>\n' +
-          '</g>\n' +
+        '<g class="graph-node-template">\n' +
+          '<rect class="scalable" width="260" height="38"/>\n' +
           '<g ng-transclude></g>\n' +
-          '<a class="connection-port" xlink:href="">\n' +
-            '<path d="M0,0 30,0 30,38 0,38" style="fill:white;fill-opacity:0.0;"/>\n' +
+          '<g class="connection-port">\n' +
             '<circle class="outer" cx="15" cy="19" r="6"/>\n' +
             '<circle class="inner" cx="15" cy="19" r="2.5"/>\n' +
-          '</a>\n' +
-          '<a class="remove-element" xlink:href="">\n' +
-            '<path d="M220,0 260,0 260,38 220,38" style="fill:white;fill-opacity:0.0;"/>\n' +
+          '</g>\n' +
+          '<g class="remove-element">\n' +
             '<path class="cross" transform="translate(235, 15)" opacity="0.4" d="M0,0 L10,10 M10,0 L0,10"/>\n' +
-          '</a>\n' +
+          '</g>\n' +
         '</g>'
       );
 
