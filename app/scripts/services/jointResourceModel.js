@@ -24,22 +24,18 @@ angular.module('angular-jointjs-graph')
         };
       }
 
-      function createFactoryForExisting(JointModel, argsFactory) {
-        if (_.isUndefined(argsFactory.resource)) {
-          throw new Error('Entity and link factories must return an object declaring a resource field');
-        }
-
+      function createFactoryForExisting(JointModel, configObject) {
         var Model = wrapModel(JointModel);
         Model.prototype.createResource = function() {
           var deferred = $q.defer(),
             postData = {},
             self = this;
 
-          if (_.isFunction(argsFactory.postDataFn)) {
-            postData = argsFactory.postDataFn(this);
+          if (_.isFunction(configObject.postDataFn)) {
+            postData = configObject.postDataFn(this);
           }
 
-          argsFactory.resource.save({}, postData, function(response) {
+          configObject.resource.save({}, postData, function(response) {
             var params = self.get('backendModelParams');
 
             _.each(params, function(value, key) {
@@ -48,8 +44,8 @@ angular.module('angular-jointjs-graph')
               }
             });
 
-            if (_.isFunction(argsFactory.modelUpdateCallback)) {
-              argsFactory.modelUpdateCallback(self, response);
+            if (_.isFunction(configObject.modelUpdateCallback)) {
+              configObject.modelUpdateCallback(self, response);
             }
 
             deferred.resolve(response);
@@ -67,11 +63,11 @@ angular.module('angular-jointjs-graph')
         forExistingEntity: function() {
           return new Factory(wrapModel(JointNodeModel));
         },
-        forNewEntity: function(argsFactory) {
-          return createFactoryForExisting(JointNodeModel, argsFactory);
+        forNewEntity: function(configObject) {
+          return createFactoryForExisting(JointNodeModel, configObject);
         },
-        forLink: function(argsFactory) {
-          return createFactoryForExisting(JointLinkModel, argsFactory);
+        forLink: function(configObject) {
+          return createFactoryForExisting(JointLinkModel, configObject);
         }
       };
     }

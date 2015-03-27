@@ -1,7 +1,7 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .directive('graph', ['JointGraph', 'JointChartNode', 'JointElementView', 'JointNodeModel', 'JointPaper', '$q', 'GraphHelpers', 'GraphEntities', 'GraphLinks', 'GraphSelection', 'FactoryMap',
-    function(JointGraph, JointChartNode, JointElementView, JointNodeModel, JointPaper, $q, GraphHelpers, GraphEntities, GraphLinks, GraphSelection, FactoryMap) {
+  .directive('graph', ['JointGraph', 'JointChartNode', 'JointElementView', 'JointNodeModel', 'JointPaper', '$q', 'GraphHelpers', 'GraphEntities', 'GraphLinks', 'GraphSelection', 'FactoryMap', 'JointGraphResources',
+    function(JointGraph, JointChartNode, JointElementView, JointNodeModel, JointPaper, $q, GraphHelpers, GraphEntities, GraphLinks, GraphSelection, FactoryMap, JointGraphResources) {
       return {
         restrict: 'E',
         templateUrl: 'angular-joints-graph/templates/graph',
@@ -9,6 +9,8 @@ angular.module('angular-jointjs-graph')
         controller: ['$scope', '$element', '$attrs',
           function($scope, $element, $attrs) {
             $scope.$on('graphResources', function(event, data) {
+              JointGraphResources.set(data);
+
               var GraphClass = data.graph,
                   graphResource = new GraphClass();
 

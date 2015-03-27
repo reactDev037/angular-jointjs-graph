@@ -1,10 +1,14 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointChartNode', ['$injector', 'JointResourceModel', 'FactoryMap', 'GraphHelpers',
-    function($injector, JointResourceModel, FactoryMap, GraphHelpers) {
+  .factory('JointChartNode', ['JointResourceModel', 'FactoryMap', 'GraphHelpers', 'JointGraphResources',
+    function(JointResourceModel, FactoryMap, GraphHelpers, JointGraphResources) {
       function getFactory(entityAttributes) {
         if (entityAttributes[GraphHelpers.getModelIdKey()] === 'undefined') {
-          return JointResourceModel.forNewEntity(FactoryMap.get(entityAttributes.entityIdentifier));
+          var entityIdentifier = entityAttributes.entityIdentifier,
+              configObject = FactoryMap.get(entityIdentifier) || {};
+
+          configObject.resource = JointGraphResources.get().entities[entityIdentifier];
+          return JointResourceModel.forNewEntity(configObject);
         } else {
           return JointResourceModel.forExistingEntity();
         }

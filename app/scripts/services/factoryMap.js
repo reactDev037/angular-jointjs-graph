@@ -5,17 +5,14 @@ angular.module('angular-jointjs-graph')
       var factoriesMap = {};
 
       function registerFactory(factoryName, alias) {
-        if ($injector.has(factoryName)) {
-          factoriesMap[alias || factoryName] = factoryName;
-        } else {
-          throw new Error('Factory ' + factoryName + ' is not registered with any loaded module.' );
-        }
+        factoriesMap[alias || factoryName] = factoryName;
       }
 
       return {
         registerFactories: function(configFactoryName) {
           registerFactory(configFactoryName, 'JointGraphConfig');
 
+          // This line is unguarded deliberately. A config factory must be provided by the user
           var Config = $injector.get(configFactoryName);
 
           registerFactory(Config.linkFactory, 'LinkFactory');
@@ -27,7 +24,11 @@ angular.module('angular-jointjs-graph')
           });
         },
         get: function(nameOrAlias) {
-          return $injector.get(factoriesMap[nameOrAlias], null);
+          try {
+            return $injector.get(factoriesMap[nameOrAlias], null);
+          } catch(e) {
+            return null;
+          }
         }
       };
     }
