@@ -46,8 +46,15 @@ angular.module('angular-jointjs-graph')
       };
 
       return {
-        get: function() {
-          return angular.extend(defaults, values, FactoryMap.get('JointLinkParams').get());
+        get: function(backendModelParams) {
+          var params = angular.extend(defaults, values),
+              paramsFactory = FactoryMap.get('JointLinkParams');
+
+          if (paramsFactory) {
+            angular.extend(params, paramsFactory.get(backendModelParams));
+          }
+
+          return params;
         }
       };
     }

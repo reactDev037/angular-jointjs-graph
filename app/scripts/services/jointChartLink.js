@@ -2,19 +2,6 @@
 angular.module('angular-jointjs-graph')
   .factory('JointChartLink', ['$q', 'JointLinkDefaults', 'JointResourceModel', 'FactoryMap', 'GraphHelpers', 'JointGraphResources',
     function($q, JointLinkDefaults, JointResourceModel, FactoryMap, GraphHelpers, JointGraphResources) {
-      function getProperties() {
-        var Config = FactoryMap.get('JointGraphConfig'),
-            modelIdKey = GraphHelpers.getModelIdKey(),
-            properties = Config.linkModelProperties;
-
-        if (properties) {
-          properties.push(modelIdKey);
-          return properties;
-        } else {
-          return [modelIdKey];
-        }
-      }
-
       return {
         create: function(params) {
           var configObject = FactoryMap.get('LinkFactory') || {};
@@ -22,7 +9,7 @@ angular.module('angular-jointjs-graph')
 
           var Factory = JointResourceModel.forLink(configObject),
               backendModelParams = {},
-              properties = getProperties();
+              properties = GraphHelpers.linkProperties();
 
           _.each(properties, function(prop) {
             backendModelParams[prop] = 'undefined';
@@ -30,7 +17,7 @@ angular.module('angular-jointjs-graph')
 
           var defaults = {
             backendModelParams: backendModelParams,
-            attrs: JointLinkDefaults.get().newLinkAttributes,
+            attrs: JointLinkDefaults.get(backendModelParams).newLinkAttributes,
             isChartNode: false
           };
 

@@ -2,6 +2,25 @@
 angular.module('angular-jointjs-graph')
   .factory('GraphHelpers', ['$q', 'FactoryMap',
     function($q, FactoryMap) {
+      function getProperties(identifier) {
+        var Config = FactoryMap.get('JointGraphConfig'),
+            modelIdKey = getModelIdKey(),
+            properties = identifier ?
+              Config.entityModelProperties[identifier] :
+              Config.linkModelProperties;
+
+        if (_.isArray(properties)) {
+          properties.push(modelIdKey);
+          return properties;
+        } else {
+          return [modelIdKey];
+        }
+      }
+
+      function getModelIdKey() {
+        return FactoryMap.get('JointGraphConfig').modelIdKey || 'id';
+      }
+
       return {
         queryResource: function(resourceClass) {
           var deferred = $q.defer();
@@ -14,20 +33,12 @@ angular.module('angular-jointjs-graph')
 
           return deferred.promise;
         },
-        getModelIdKey: function() {
-          return FactoryMap.get('JointGraphConfig').modelIdKey || 'id';
-        },
+        getModelIdKey: getModelIdKey,
         entityProperties: function(identifier) {
-          var Config = FactoryMap.get('JointGraphConfig'),
-              modelIdKey = this.getModelIdKey(),
-              properties = Config.entityModelProperties[identifier];
-
-          if (properties) {
-            properties.push(modelIdKey);
-            return properties;
-          } else {
-            return [modelIdKey];
-          }
+          return getProperties(identifier);
+        },
+        linkProperties: function() {
+          return getProperties();
         }
       };
     }

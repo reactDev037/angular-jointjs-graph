@@ -5,17 +5,31 @@ angular.module('angular-jointjs-graph')
       var selection,
           selectionChangeCallback;
 
-      function updateSelectedEntity() {
+      function updateSelection() {
         var cell = JointGraph.getCell(selection.selectedCellId);
 
         if (cell) {
-          var modelValues = {};
+          var modelValues = {},
+              isChartNode = cell.get('isChartNode'),
+              paramsFactory = isChartNode ?
+                FactoryMap.get('JointNodeParams') :
+                FactoryMap.get('JointLinkParams');
 
-          _.each(GraphHelpers.entityProperties(selection.entityIdentifier), function(propertyKey) {
-            modelValues[propertyKey] = selection.selectedResource[propertyKey];
-          });
+          if (paramsFactory) {
+            var properties = isChartNode ?
+                GraphHelpers.entityProperties(selection.entityIdentifier) :
+                GraphHelpers.linkProperties();
 
-          cell.attr(FactoryMap.get('JointNodeParams').get(modelValues).attrs);
+            _.each(properties, function(propertyKey) {
+              modelValues[propertyKey] = selection.selectedResource[propertyKey];
+            });
+
+            var attributes = paramsFactory.get(modelValues).attrs;
+
+            if (attributes) {
+              cell.attr(attributes);
+            }
+          }
         }
       }
 
@@ -65,14 +79,14 @@ angular.module('angular-jointjs-graph')
         revertSelection: function() {
           if (selection) {
             angular.copy(selection.masterResource, selection.selectedResource);
-            updateSelectedEntity();
+            updateSelection();
             notifySelectionChange();
           }
         },
         syncSelection: function() {
           if (selection) {
             angular.copy(selection.selectedResource, selection.masterResource);
-            updateSelectedEntity();
+            updateSelection();
             notifySelectionChange();
           }
         },
@@ -85,7 +99,7 @@ angular.module('angular-jointjs-graph')
           JointPaper.clearSelection();
           if (selection) {
             angular.copy(selection.masterResource, selection.selectedResource);
-            updateSelectedEntity();
+            updateSelection();
           }
           selection = null;
           notifySelectionChange();
