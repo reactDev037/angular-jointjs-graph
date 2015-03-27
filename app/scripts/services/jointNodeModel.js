@@ -8,11 +8,11 @@ angular.module('angular-jointjs-graph')
         init: function(markup) {
           ModelConstructor = $window.joint.shapes.basic.Rect.extend({
             markup: markup,
-            defaults: $window.joint.util.deepSupplement({
+            defaults: {
               // The corresponding html.ElementView is defined
               // in the JointElementView service.
               type: 'html.Element'
-            }, $window.joint.shapes.basic.Rect.prototype.defaults)
+            }
           });
 
           //Any methods that should be common to all node instances should be prototyped

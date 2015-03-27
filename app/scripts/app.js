@@ -15,7 +15,7 @@ angular.module('angular-jointjs-graph/templates', [])
 
       $templateCache.put('angular-joints-graph/templates/graphNode',
         '<g class="graph-node-template">\n' +
-          '<rect class="scalable" width="260" height="38"/>\n' +
+          '<rect width="260" height="38"/>\n' +
           '<g ng-transclude></g>\n' +
           '<g class="connection-port">\n' +
             '<circle class="outer" cx="15" cy="19" r="6"/>\n' +
