@@ -59,7 +59,7 @@ angular.module('angular-jointjs-graph')
             this.linkView.startArrowheadMove('target');
 
             this.link.on('change:target', function (link) {
-              // we short-circuit the allowed function to avoid self-highlighting
+              // we short-circuit the allowed function to avoid highlighting self as forbidden
               if (link.invalidTarget() || link.allowed()) {
                 link.colorLinkAllowed();
                 link.removeLinkLabels();

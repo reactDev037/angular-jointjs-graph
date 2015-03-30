@@ -17,7 +17,7 @@ angular.module('angular-jointjs-graph')
 
           var defaults = {
             backendModelParams: backendModelParams,
-            attrs: JointLinkDefaults.get(backendModelParams).newLinkAttributes,
+            attrs: JointLinkDefaults.get(backendModelParams).attrs,
             isChartNode: false
           };
 

@@ -16,19 +16,21 @@ angular.module('angular-jointjs-graph')
         //on the new constructor class here.
 
         LinkModel.prototype.colorLinkAllowed = function() {
-          this.attr('.connection/stroke', linkDefaults.linkConnectionColorAllowed);
-          this.attr('.marker-target/fill', linkDefaults.linkMarkerColorAllowed);
+          var selector = $window.V(JointPaper.getPaper().findViewByModel(this).el);
+          selector.removeClass('forbidden');
+          selector.addClass('allowed');
         };
 
         LinkModel.prototype.colorLinkForbidden = function() {
-          this.attr('.connection/stroke', linkDefaults.linkConnectionColorForbidden);
-          this.attr('.marker-target/fill', linkDefaults.linkMarkerColorForbidden);
+          var selector = $window.V(JointPaper.getPaper().findViewByModel(this).el);
+          selector.removeClass('allowed');
+          selector.addClass('forbidden');
         };
 
         LinkModel.prototype.colorLinkCreated = function() {
-          this.attr('.connection/stroke-width', linkDefaults.linkConnectionWidthCreated);
-          this.attr('.connection/stroke', linkDefaults.linkConnectionColorCreated);
-          this.attr('.marker-target/fill', linkDefaults.linkMarkerColorCreated);
+          var selector = $window.V(JointPaper.getPaper().findViewByModel(this).el);
+          selector.removeClass('allowed');
+          selector.removeClass('forbidden');
         };
 
         LinkModel.prototype.addLinkForbiddenLabel = function() {
@@ -89,6 +91,10 @@ angular.module('angular-jointjs-graph')
         };
 
         LinkModel.prototype.allowed = function() {
+          if (this.invalidTarget()) {
+            return false;
+          }
+
           if (linkDefaults.canCreateLink) {
             return linkDefaults.canCreateLink.apply(null, getSourceAndTargetViews(this));
           } else {

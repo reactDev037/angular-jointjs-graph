@@ -124,6 +124,42 @@
       }
     }
 
+    .link {
+      .connection {
+        stroke: #AAAAAA;
+        stroke-width: 1px;
+      }
+
+      .marker-target {
+        stroke-width: 0;
+        fill: #AAAAAA;
+      }
+    }
+
+    .link.forbidden {
+      .connection {
+        stroke: @red;
+        stroke-width: 3px;
+      }
+
+      .marker-target {
+        stroke-width: 0;
+        fill: @red;
+      }
+    }
+
+    .link.allowed {
+      .connection {
+        stroke: @green;
+        stroke-width: 3px;
+      }
+
+      .marker-target {
+        stroke-width: 0;
+        fill: @green;
+      }
+    }
+
     .link.selected {
       .connection {
         stroke: @selection-color;
@@ -149,6 +185,19 @@
       .connection-wrap {
         cursor: default;
         opacity: 0;
+      }
+    }
+
+    .link .label {
+      rect {
+        fill: @red;
+        stroke: @red;
+        stroke-width: 5;
+      }
+
+      text {
+        fill: white;
+        font-weight: normal;
       }
     }
 

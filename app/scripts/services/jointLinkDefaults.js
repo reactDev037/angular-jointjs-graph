@@ -2,26 +2,9 @@
 angular.module('angular-jointjs-graph')
   .factory('JointLinkDefaults', ['FactoryMap',
     function(FactoryMap) {
-      var values = {
-        linkConnectionColorAllowed: '#66AC3F',
-        linkMarkerColorAllowed: '#66AC3F',
-        linkConnectionColorForbidden: '#C4434B',
-        linkMarkerColorForbidden: '#C4434B',
-        linkConnectionColorCreated: '#AAAAAA',
-        linkMarkerColorCreated: '#AAAAAA',
-        linkConnectionWidthCreated: 1,
-        linkForbiddenCaption: '  Cannot create link to beneficiary  '
-      };
-
       var defaults = {
-        newLinkAttributes: {
-          '.connection': {
-            stroke: values.linkConnectionColorCreated,
-            'stroke-width': 3
-          },
+        attrs: {
           '.marker-target': {
-            fill: values.linkMarkerColorCreated,
-            'stroke-width': 0,
             d: 'M 10 0 L 0 5 L 10 10 z'
           },
           '.marker-source': {display: 'none'},
@@ -31,15 +14,8 @@ angular.module('angular-jointjs-graph')
         linkForbiddenLabel: {
           position: 0.5,
           attrs: {
-            rect: {
-              fill: values.linkConnectionColorForbidden,
-              stroke: values.linkConnectionColorForbidden,
-              'stroke-width': '5'
-            },
             text: {
-              fill: 'white',
-              text: values.linkForbiddenCaption,
-              'font-weight': 'normal'
+              text: '  Cannot create link to beneficiary  '
             }
           }
         }
@@ -47,14 +23,13 @@ angular.module('angular-jointjs-graph')
 
       return {
         get: function(backendModelParams) {
-          var params = angular.extend(defaults, values),
-              paramsFactory = FactoryMap.get('JointLinkParams');
+          var paramsFactory = FactoryMap.get('JointLinkParams');
 
           if (paramsFactory) {
-            angular.extend(params, paramsFactory.get(backendModelParams));
+            angular.extend(defaults, paramsFactory.get(backendModelParams));
           }
 
-          return params;
+          return defaults;
         }
       };
     }
