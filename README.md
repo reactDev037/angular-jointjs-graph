@@ -8,7 +8,7 @@ version 0.11.1.
 The package is available in the bower registry under the name `angular-joinjs-graph`. To use it
 in your project, include it in your `bower.json` manifest as dependency:
  
-```JSON
+```javascript
 "dependencies": {
   "angular-joinjs-graph": "^0.1.0"
 }
@@ -270,7 +270,7 @@ you have used the following markup in the `graph` directive:
 You may then define different arrays with properties that will be carried over from the
 corresponding backend models to the graph nodes:
 
-```JSON
+```javascript
 entityModelProperties: {
   project: ['name', 'launch_date', 'duration'...],
   lead: ['name', 'team'...]
@@ -316,7 +316,7 @@ The rest of the keys in the configuration object are described below.
 The main directive in the module, `graph`, defines a `$scope.$on` event listener triggered by an event
 named `graphResources`. The `data` object attached to the event should have the following structure:
 
-```JSON
+```javascript
 {
   graph: $resource,
   entities: {
@@ -347,7 +347,7 @@ field containing the actual serialized data. Before a graph structure is created
 allowed value for the content field. The following example is a valid response for a `GET` action
 on the graph resource object:
 
-```JSON
+```javascript
 {
   id: 1,
   content: null,
@@ -444,3 +444,57 @@ in the case described in the previous section.
 ### <a name="attr-factories"></a>SVG attribute factories
 
 ### <a name="scope-interface"></a>Interface methods and events
+
+The following events are emitted by the graph directive:
+
+  * `applicationError`: Will be triggered by a failed server action. The original XHR error data 
+    is available in the associated data object carried with the event in a field named `errData`.
+    
+The following events are broadcast by the graph directive:
+
+  * `graphEntitiesLoaded`: Will be triggered when the arrays with entity models for all specified 
+    identifiers have been fetched from the server. The data object for the event is an object with 
+    the key-value pairs being the identifiers and the respective `$resource` arrays.
+  * `graphEntityRelationsLoaded`: Will be triggered when the array with entity relation models has
+    been fetched. The event data is the array itself.
+  * `graphResourcesLoaded`: Will be triggered after all resources have been loaded. The event has
+    no data attached.
+  * `graphSelection`: Will be triggered when the selected graph element changes. The data object
+    carried with the event has the following structure:
+    
+    ```javascript
+    {
+      isChartNode: Boolean,
+      selectedResource: $resource,
+      selectedCellId: String,
+      masterResource: $resource,
+      entityIdentifier: String
+    }
+    ```
+    
+    The `isChartNode` property denotes whether the selected graph element is a node or link; the
+    `selectedResource` property is the actual entity or link model corresponding to the graph element.
+    `selectedCellId` is the JointJs unique identifier string for the graph element and may be used
+    to retrieve the JointJs model or view if this should be required. Since the framework keeps
+    internal state of the selected resource in `masterResource`, it is not desirable to modify it -
+    it is included in the selection object for logging/debugging purposes only. The `entityIdentifier` will
+    be set to the corresponding value for entity models and will be undefined for links.
+    
+The following methods are available in the scope of the `graph` directive and in all inheriting scopes:
+
+  * `saveGraph()`: This method serializes the existing graph structure and issues a `PUT` request
+    to the server with the string payload assigned to the `content` field of the provided `$resource`
+    object, as described in the [initialization](#init) section.
+  * `clearCellSelectionAndRevert()`: Removes the selected state from the currently selected graph element
+     and reverts the selected resource to the value stored in the `masterResource` value. This value is set 
+     initially upon selection or by subsequent calls to `syncSelection()`. This method will fire the
+     `graphSelectionEvent` with a `null` data object, since there will be no valid selection afterwards.
+  * `revertSelection()`: Reverts the selected resource to the value stored in the `masterResource` value.
+    The selected state of the graph element isn't altered. The `graphSelectionEvent` will be fired with 
+    the updated selection object.
+  * `syncSelection()`: Copies the current state of the `selectedResource` entity model to `masterResource`.
+    The `graphSelectionEvent` will be fired with the updated selection object.
+  * `selectEntity(entity, identifier)`: Selects an entity model programmatically, even if there is no
+    associated JointJs model present on the graph. In this case, the `selectedCellId` of the selection
+    object will be undefined. This method makes it possible to deal with selection of entity models
+    listed in the existing list which haven't been dragged onto the graph yet.
