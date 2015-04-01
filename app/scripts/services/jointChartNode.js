@@ -16,17 +16,20 @@ angular.module('angular-jointjs-graph')
 
       return {
         create: function(entityAttributes, dropPoint) {
-          var Factory = getFactory(entityAttributes),
-            params = {
-              position: { x: dropPoint.x, y: dropPoint.y },
-              backendModelParams: entityAttributes,
-              options: { interactive: true },
-              isChartNode: true
-            };
+          var EntityFactory = getFactory(entityAttributes),
+              ParamsFactory = FactoryMap.get('JointNodeParams'),
+              params = {
+                position: { x: dropPoint.x, y: dropPoint.y },
+                backendModelParams: entityAttributes,
+                options: { interactive: true },
+                isChartNode: true
+              };
 
-          angular.extend(params, FactoryMap.get('JointNodeParams').get(entityAttributes));
+          if (ParamsFactory) {
+            angular.extend(params, ParamsFactory.get(entityAttributes));
+          }
 
-          return Factory.create(params);
+          return EntityFactory.create(params);
         }
       };
     }

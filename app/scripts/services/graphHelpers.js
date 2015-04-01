@@ -4,10 +4,22 @@ angular.module('angular-jointjs-graph')
     function($q, FactoryMap) {
       function getProperties(identifier) {
         var Config = FactoryMap.get('JointGraphConfig'),
-            modelIdKey = getModelIdKey(),
-            properties = identifier ?
-              Config.entityModelProperties[identifier] :
-              Config.linkModelProperties;
+            modelIdKey,
+            properties;
+
+        if (Config) {
+          modelIdKey = Config.modelIdKey || 'id';
+
+          if (identifier) {
+            properties = Config.entityModelProperties ?
+              Config.entityModelProperties[identifier] : null;
+          } else {
+            properties = Config.linkModelProperties;
+          }
+        } else {
+          modelIdKey = 'id';
+          properties = null;
+        }
 
         if (_.isArray(properties)) {
           properties.push(modelIdKey);
@@ -18,7 +30,8 @@ angular.module('angular-jointjs-graph')
       }
 
       function getModelIdKey() {
-        return FactoryMap.get('JointGraphConfig').modelIdKey || 'id';
+        var Config = FactoryMap.get('JointGraphConfig');
+        return (Config && Config.modelIdKey) ? Config.modelIdKey : 'id';
       }
 
       return {
