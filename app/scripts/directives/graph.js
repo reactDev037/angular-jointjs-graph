@@ -25,7 +25,7 @@ angular.module('angular-jointjs-graph')
                 return GraphHelpers.queryResource(data.entityRelations);
               }).then(function(entityRelations) {
                 GraphLinks.set(entityRelations);
-                $scope.$broadcast('graphLinksLoaded', entityRelations);
+                $scope.$broadcast('graphEntityRelationsLoaded', entityRelations);
               }).then(function() {
                 $scope.$broadcast('graphResourcesLoaded');
                 initGraph();
@@ -77,11 +77,11 @@ angular.module('angular-jointjs-graph')
               GraphSelection.clearAndRevert();
             };
 
-            $scope.revertEntity = function() {
+            $scope.revertSelection = function() {
               GraphSelection.revertSelection();
             };
 
-            $scope.syncEntity = function() {
+            $scope.syncSelection = function() {
               GraphSelection.syncSelection();
             };
 
@@ -187,9 +187,10 @@ angular.module('angular-jointjs-graph')
               $scope.$broadcast('graphSelection', selection);
             });
 
-            $scope.handleDrop = function(entityAttributes, dropPoint) {
+            $scope.$on('graphDropEvent', function(event, data) {
+              event.stopPropagation();
               $scope.$apply(function() {
-                var rect = JointChartNode.create(entityAttributes, dropPoint);
+                var rect = JointChartNode.create(data.entityAttributes, data.dropPoint);
                 JointGraph.addCell(rect);
                 updateResourceList(rect).then(function(data) {
                     if(data.newNode) {
@@ -203,7 +204,7 @@ angular.module('angular-jointjs-graph')
                     rect.remove();
                   });
               });
-            };
+            });
           }
         ]
       };

@@ -1,15 +1,10 @@
 'use strict';
 angular.module('angular-jointjs-graph')
-  .directive('droppable', ['$window', '$parse',
-    function ($window, $parse) {
+  .directive('droppable', ['$window',
+    function ($window) {
       return {
-        link: function (scope, element, attrs) {
-          if (!attrs.droppable) {
-            throw new Error('Directive requires a function call expression as argument');
-          }
-
-          var dropFunction = $parse(attrs.droppable),
-            el = element[0];
+        link: function (scope, element) {
+          var el = element[0];
 
           el.addEventListener('dragover', function(e) {
             e.preventDefault();
@@ -32,7 +27,7 @@ angular.module('angular-jointjs-graph')
               dropPoint = $window.g.point(left, top),
               entityAttributes = JSON.parse(e.dataTransfer.getData('entity-attributes'));
 
-            dropFunction(scope, { entityAttributes: entityAttributes, dropPoint: dropPoint });
+            scope.$emit('graphDropEvent', { entityAttributes: entityAttributes, dropPoint: dropPoint });
           });
         }
       };

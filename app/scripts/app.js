@@ -7,7 +7,7 @@ angular.module('angular-jointjs-graph/templates', [])
       $templateCache.put('angular-joints-graph/templates/graph',
         '<div class="organogram">\n' +
           '<section class="chartContainer">\n' +
-            '<div class="chartArea" droppable="handleDrop(entityAttributes, dropPoint)"></div>\n' +
+            '<div class="chartArea" droppable></div>\n' +
             '<div ng-transclude></div>\n' +
           '</section>\n' +
         '</div>'
