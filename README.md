@@ -8,7 +8,7 @@ version 0.11.1.
 The package is available in the bower registry under the name `angular-joinjs-graph`. To use it
 in your project, include it in your `bower.json` manifest as dependency:
  
-```
+```JSON
 "dependencies": {
   "angular-joinjs-graph": "^0.1.0"
 }
@@ -106,7 +106,7 @@ There are several steps required to use the framework:
   2. Insert the required HTML/SVG markup
   3. Define a factory returning a configuration object
   4. Issue an event carrying the `$resource` objects for the entity and relationship backend models 
-  5. Define the factories needed to create new entity models and relationships
+  5. Define optional factories providing callbacks invoked during the entity/link creation process
   6. Define factories providing user-specified SVG attributes for the different entity and relationship classes
   
 The following sections describe the actions required by each step in detail.
@@ -162,10 +162,8 @@ a new entity model in the backend.
 
 Note that both directives may be used several times - this depends on how many different entity models the 
 user has defined and wants to be present on the graph. Both directive require an `entity-identifier`
-argument. In the case of new entities this label ties the entity to a concrete factory declared in the config
-object that is used to retrieve a `$resource` object and execute a `POST` request on it which creates the 
-associated entity model in the backend. In both cases, the label is used to differentiate between the
-different entity types required by the user, passing the proper set of entity properties to the JointJS
+argument. It is used to differentiate between the different entity model classes, invoking `POST` ot `PUT` 
+actions on the proper `$resource` objects and passing the corresponding set of model properties to the JointJS
 models, enabling custom styling and behavior for the different graph nodes.
 
 The `graph-existing-entities` directive contains an `ng-repeat` loop iterating over all the entities retrieved for the
@@ -186,7 +184,7 @@ remove area, which removes the node upon click:
 
 ```SVG
 <g class="graph-node-template">
-  <rect class="scalable" width="260" height="38"/>
+  <rect width="260" height="38"/>
   <g ng-transclude></g>
   <g class="connection-port">
     <circle class="outer" cx="15" cy="19" r="6"/>
@@ -216,12 +214,14 @@ the framework relies on the two classes `connection-port` and `remove-element` t
 trigger link creation and node removal events, so the new template should contain elements
 with those two classes in order for these events to be issued and handled properly.
 
-
 ### <a name="config"></a>Configuration
 
-The framework requires a factory returning a plain javascript object containing basic configuration 
-parameters. It can have an arbitrary name which must be passed to the `graph` directive as described 
-in the previous section. In its fullest form, the configuration object looks as following:
+The framework accepts configuration parameters provided by a factory returning a plain 
+javascript object. It can have an arbitrary name which must be passed to the `graph` 
+directive as described in the previous section. The framework can be used without 
+specifying such factory, although this may only be useful for testing/debugging 
+purposes. All the keys in the returned object are similarly optional. In its fullest 
+form, the configuration object looks as following:
 
 ```javascript
 angular.module('app')
@@ -232,22 +232,22 @@ angular.module('app')
           firstEntity: ['property1', 'property2'...],
           secondEntity: ['property3', 'property4'...]
         },
-        entityFactories: {
-          firstEntity: 'FirstEntityCreator',
-          secondEntity: 'SecondEntityCreator'
+        entityCreationCallbacks: {
+          firstEntity: 'FirstEntityCallbacks',
+          secondEntity: 'SecondEntityCallbacks'
         },
         modelIdKey: 'uuId',
         linkModelProperties: [],
-        linkFactory: 'LinkCreator',
-        entityGraphParamsFactory: 'EntityMarkupParams',
-        linkGraphParamsFactory: 'LinkMarkupParams',
+        linkCreationCallbacks: 'LinkCallbacks',
+        entityMarkupParams: 'EntityMarkup',
+        linkMarkupParams: 'LinkMarkup'
       };
     }
   ]);
 ```
 
 There are a couple of important points to note regarding the object's structure. First of all,
-the `entityModelProperties` key must contain a hash mapping every entity identifier used as 
+the `entityModelProperties` key points to a hash mapping every entity identifier used as 
 argument to the `graphNewEntity` or `graphExistingEntities` directives to an array of property 
 names. These property names will be used to transfer values from the backend models (`$resource`
 objects) to the JointJS models on the graph, enabling custom styling and behavior. Suppose
@@ -270,7 +270,7 @@ you have used the following markup in the `graph` directive:
 You may then define different arrays with properties that will be carried over from the
 corresponding backend models to the graph nodes:
 
-```javascript
+```JSON
 entityModelProperties: {
   project: ['name', 'launch_date', 'duration'...],
   lead: ['name', 'team'...]
@@ -283,10 +283,10 @@ with the values extracted from the backend models. These properties can be used 
 attributes to the JointJS models conditionally or define link creation restrictions as described 
 in section [SVG attribute factories](#attr-factories).
 
-Similarly, the `entityFactories` key should contain a map defining a factory name for every
+The `entityCreationCallbacks` key may contain a map defining a factory name for every
 entity identifier that is passed to a `graphNewEntity` directive. These factories are
-used to create the backend models for the new entities crated on the graph. See section
-[Entity Factories](#entity-factories) for details.
+used to provide callbacks invoked before and after the entity model has been created on the server. 
+See section [Entity creation callbacks](#entity-creation-callbacks) for details.
 
 The rest of the keys in the configuration object are described below.
 
@@ -295,37 +295,34 @@ The rest of the keys in the configuration object are described below.
 
   * `linkModelProperties`: Similar to `entityModelProperties`, this array should specify 
     model properties that will be available in the JointJS link models when links are
-    created between entities on the graph. This makes it possible to show labels on links 
-    containing data from the backend model defining the entity relationship. The array may be empty.
+    created between entities on the graph.
  
-  * `linkFactory`: The name of the factory that will be invoked when links are created
-    on the graph. It will be responsible for creating the backend models for entity
-    relationships. The factory must comply to the same interface as the entity factories and is
-    a mandatory configuration key. See the section [Link factory](#link-factory).
+  * `linkCreationCallbacks`: If present should be the name of a factory returning callbacks
+    invoked during link creation, similar to `entityCreationCallbacks` See 
+    [Link creation callbacks](#link-creation-callbacks).
 
-  * `entityGraphParamsFactory`: A factory returning SVG attributes used to style the
+  * `entityMarkupParams`: A factory returning SVG attributes used to style the
     graph nodes associated with entity models. The factory will receive a hash object
     with the keys defined in `entityModelProperties` and the values taken from the
     corresponding backend entity model.
 
-  * `linkGraphParamsFactory`: A factory returning SVG attributes used to style the
+  * `linkMarkupParams`: A factory returning SVG attributes used to style the
     links between graph nodes associated with relationship models. The factory will
     receive a hash object with the keys defined in `linkModelProperties` and the values 
     taken from the corresponding backend relationship model.
-
 
 ### <a name="init"></a>Initialization
 
 The main directive in the module, `graph`, defines a `$scope.$on` event listener triggered by an event
 named `graphResources`. The `data` object attached to the event should have the following structure:
 
-```javascript
+```JSON
 {
   graph: $resource,
   entities: {
     entityIdentifierOne: $resource,
     entityIdentifierTwo: $resource
-  }
+  },
   entityRelations: $resource
 }
 ```
@@ -350,11 +347,11 @@ field containing the actual serialized data. Before a graph structure is created
 allowed value for the content field. The following example is a valid response for a `GET` action
 on the graph resource object:
 
-```javascript
+```JSON
 {
-  id: 1
-  content: null
-  created_at: "2015-03-26T11:35:02.684Z"
+  id: 1,
+  content: null,
+  created_at: "2015-03-26T11:35:02.684Z",
   updated_at: "2015-03-26T11:35:02.684Z"
 }
 ```
@@ -366,35 +363,28 @@ objects provided, however it is up to the end user configure the correct URLs an
 for each of them in order for the respective requests to succeed - the framework will not make
 any assumptions about resource locations and backend API structure.
 
-### <a name="entity-factories"></a>Entity factories
+### <a name="entity-creation-callbacks"></a>Entity creation callbacks
 
 The process of creating a new entity on the graph can be summarized in the following steps:
 
  1. Decide based on the drop event whether the new graph node should be associated with
     an existing backend model or a new model should be created.
  2. Create a wrapper around the JointJS model constructor. If a new entity model is to
-    be created, use the user-provided entity factories to prototype a method on the wrapper
-    that will be used to make a server call and create the backend model.
+    be created, prototype a method on the wrapper that will be used to make a `POST` to the server 
+    and create the backend model. The `$resource` object for the call will be chosen from the resources
+    provided during the [inititalization]('#init') stage.
  3. Instantiate the wrapper and add the returned node to the graph.
  4. Invoke the wrapper method on the model instance and add the returned backend model to the
     existing entities list, initially hiding it from view.
  
-During step 2., the entity factories for the corresponding identifier (type) will be invoked
-to supply the needed `$resource` objects as described in the [Configuration](#config) section. 
-Beyond the mandatory `$resource` object, the factories may provide additional callbacks 
-invoked during different stages of the entity creation process.
-
+During step 2., two callback methods will be invoked if a factory has been provided by the user.
 An example factory definition follows:
 
 ```javascript
 angular.module('app')
-  .factory('EntityOneFactory', ['$resource',
-    function($resource) {
-      var url = 'url/to/first_resource',
-          EntityResource = $resource(url);
-            
+  .factory('EntityOneFactory', [
+    function() {
       return {
-        resource: EntityResource,
         postDataFn: function(jointJsModel) {
           return { entity_type: 'EntityOne' };
         },
@@ -406,47 +396,37 @@ angular.module('app')
   ]);
 ```
 
-Since the resource object is also required for the `graphResources` event as described in the
-[initialization](#init) section, it is a good practice to define a separate service returning
-the resource objects for the different entity identifiers.
- 
-The two optional fields in the returned object are described below: 
+The two fields in the returned object are described below: 
 
   * `postDataFn`: A function returning a hash carrying additional data for the `POST` request. It will
     be invoked with a single argument, the JointJS model, which allows additional info, like the source
     and target ids in the case of a link, to be included in the `POST` data. See example in the 
-    [Link factory](#link-factory) section.
+    [Link creation callbacks](#link-creation-callbacks) section.
 
   * `modelUpdateCallback`: A callback function that will be invoked after the `POST` request has
     succeeded. It is called with two arguments, the JointJS model and the server response (which is 
     a `$resource` instance).
 
-
-### <a name="link-factory"></a>Link factory
+### <a name="link-creation-callbacks"></a>Link creation callbacks
 
 The link factory should comply to the same interface as described in the previous section. The
 example given below illustrates a common use case - supplying the ids of the source and 
 target graph nodes to the server upon link creation. The object returned by the `postDataFn`
-callback will be merged on the `LinkResource ` object. Note the injection of the `JointGraph` 
+callback will be merged on the `$resource ` object. Note the injection of the `JointGraph` 
 service, which is a simple wrapper around a `window.joint.dia.Graph` instance. A complete list
 of all services exposed by the framework can be found in the section 
 [Interface methods and events](#scope-interface).
 
 ```javascript
 angular.module('app')
-  .factory('LinkFactory', ['$resource', 'JointGraph',
-    function($resource, JointGraph) {
-      var url = 'url/to/entity_relations',
-          LinkResource = $resource(url);
-          
+  .factory('LinkFactory', ['JointGraph',
+    function(JointGraph) {
       return {
-        resource: LinkResource,
         postDataFn: function(model) {
           var sourceModel = JointGraph.getCell(model.get('source').id),
               targetModel = JointGraph.getCell(model.get('target').id),
             sourceModelId = sourceModel.get('backendModelParams').uuId,
             targetModelId = targetModel.get('backendModelParams').uuId;
-    
           return {
             source_entity_id: sourceModelId,
             target_entity_id: targetModelId
@@ -458,7 +438,7 @@ angular.module('app')
 ```
 
 If you wish to update the JointJS link model after the backend model is created
-(e.g. in order to show creation time), provide a `modelUpdateCallback` just as 
+(e.g. in order change the color of the link), provide a `modelUpdateCallback` just as 
 in the case described in the previous section. 
 
 ### <a name="attr-factories"></a>SVG attribute factories
