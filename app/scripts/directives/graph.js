@@ -57,7 +57,8 @@ angular.module('angular-jointjs-graph')
             }
 
             function addGraphCells() {
-              var graphContent = JSON.parse($scope.graph.content) || {};
+              var graphContent = $scope.graph.content ?
+                    JSON.parse($scope.graph.content) : {};
 
               if (graphContent.cells) {
                 _.each(graphContent.cells, function (element) {
