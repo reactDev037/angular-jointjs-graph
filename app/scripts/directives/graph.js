@@ -11,10 +11,7 @@ angular.module('angular-jointjs-graph')
             $scope.$on('graphResources', function(event, data) {
               JointGraphResources.set(data);
 
-              var GraphClass = data.graph,
-                  graphResource = new GraphClass();
-
-              graphResource.$get().then(function(graph) {
+              data.graph.$get().then(function(graph) {
                 $scope.graph = graph;
                 return $q.all(_.object(_.map(data.entities, function(resource, identifier) {
                   return [identifier, GraphHelpers.queryResource(resource)];

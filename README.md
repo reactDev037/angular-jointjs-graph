@@ -345,9 +345,11 @@ named `graphResources`. The `data` object attached to the event should have the 
 }
 ```
 
-All of the `$resource` objects are expected to be constructor objects as returned by a `$resource` 
-factory call, e.g. they should expose `query()`, `get()`, etc. methods as described in the `ngResource`
-module documentation, and not their `$`-prefixed counterparts defined on instances.
+The `graph` resource is expected to be singular, e.g. a `GET` request to the resource URL should yield
+a single resource instead of an array, therefore a `$resource` instance object should be provided
+as value. All other `$resource` objects are expected to be constructor objects as returned by a `$resource` 
+factory call, e.g. they should expose a `query()` method as described in the `ngResource`
+module documentation. 
 
 The `graph` resource is used to fetch/update the serialized graph structure, therefore a custom 
 `update` action is expected to be defined on the class, as in the following example:
