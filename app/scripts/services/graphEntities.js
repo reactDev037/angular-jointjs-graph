@@ -47,13 +47,21 @@ angular.module('angular-jointjs-graph')
           var ids = getIdentifiers(graphElement);
 
           entityToJointModelMap[ids.typeIdentifier][ids.uniqueId] = graphElement.id;
-          _.findWhere(entities[ids.typeIdentifier], getIdHash(ids.uniqueId)).show = false;
+          var entity = _.findWhere(entities[ids.typeIdentifier], getIdHash(ids.uniqueId));
+
+          if (entity) {
+            entity.show = false;
+          }
         },
         markRemovedFromGraph: function(graphElement) {
           var ids = getIdentifiers(graphElement);
 
           delete entityToJointModelMap[ids.typeIdentifier][ids.uniqueId];
-          _.findWhere(entities[ids.typeIdentifier], getIdHash(ids.uniqueId)).show = true;
+          var entity = _.findWhere(entities[ids.typeIdentifier], getIdHash(ids.uniqueId));
+
+          if (entity) {
+            entity.show = true;
+          }
         },
         jointModelId: function(typeIdentifier, entity) {
           return entityToJointModelMap[typeIdentifier][entity[GraphHelpers.getModelIdKey()]];
