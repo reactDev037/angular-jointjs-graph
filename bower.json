@@ -23,7 +23,9 @@
     ".gitattributes",
     ".jshintrc",
     "Gruntfile.js",
-    "package.json"
+    "package.json",
+    "app",
+    "test"
   ],
   "appPath": "app",
   "moduleName": "angular-jointjs-graph"
