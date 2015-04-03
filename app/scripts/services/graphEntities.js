@@ -65,6 +65,13 @@ angular.module('angular-jointjs-graph')
         },
         jointModelId: function(typeIdentifier, entity) {
           return entityToJointModelMap[typeIdentifier][entity[GraphHelpers.getModelIdKey()]];
+        },
+        remove: function(entity, identifier) {
+          var entityId = entity[GraphHelpers.getModelIdKey()],
+              entityIndex = entities[identifier].indexOf(entity);
+
+          delete entityToJointModelMap[identifier][entityId];
+          entities[identifier].splice(entityIndex, 1);
         }
       };
     }

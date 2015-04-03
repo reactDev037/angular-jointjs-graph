@@ -17,6 +17,10 @@ angular.module('angular-jointjs-graph')
             $scope.$on('graphResourcesLoaded', function() {
               $scope.entities = GraphEntities.getForType($scope.entityIdentifier);
             });
+
+            $scope.removeEntity = function(entity) {
+              $scope.$emit('removeEntity', { entity: entity, identifier: $scope.entityIdentifier });
+            };
           }
         ]
       };

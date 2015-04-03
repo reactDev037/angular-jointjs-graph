@@ -54,7 +54,9 @@ angular.module('angular-jointjs-graph/templates', [])
       );
 
       $templateCache.put('angular-joints-graph/templates/graphExistingEntities',
-        '<li ng-repeat="entity in entities" ng-hide="entity.show == false" draggable graph-existing-entity="{{entityIdentifier}}"></li>'
+        '<li ng-repeat="entity in entities" ng-hide="entity.show == false" draggable graph-existing-entity="{{entityIdentifier}}">\n' +
+          '<div class="remove-entity" ng-click="removeEntity(entity)">&times;</div>\n' +
+        '</li>'
       );
     }
   ]);

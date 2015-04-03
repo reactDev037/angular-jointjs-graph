@@ -24,7 +24,7 @@ angular.module('angular-jointjs-graph')
 
             removeElementView.on('click', function(event) {
               _.each(self.paper.model.getConnectedLinks(self.model), function(link) {
-                link.remove({ skipCallbacks: true });
+                link.remove({ skipGraphSave: true });
               });
               self.model.remove();
               self.model.trigger('nodeRemoved', event, self.model);

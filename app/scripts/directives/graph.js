@@ -124,30 +124,39 @@ angular.module('angular-jointjs-graph')
                     selectedResource = GraphSelection.getSelectedEntity();
 
                 if (resource) {
-                  resource.$remove().then(function() {
-                    if (resource === selectedResource) {
-                      GraphSelection.clear();
-                    }
+                  if (resource === selectedResource) {
+                    GraphSelection.clear();
+                  }
 
-                    GraphEntities.markRemovedFromGraph(model);
-                    $scope.saveGraph();
-                  }, function(errData) {
-                    $scope.$emit('applicationError', { errData: errData });
-                  });
+                  GraphEntities.markRemovedFromGraph(model);
+                  $scope.saveGraph();
                 }
               });
             }
 
+            $scope.$on('removeEntity', function(event, data) {
+              event.stopPropagation();
+              data.entity.$remove().then(function() {
+                GraphEntities.remove(data.entity, data.identifier);
+              }, function(errData) {
+                $scope.$emit('applicationError', { errData: errData });
+              });
+            });
+
             function linkRemoved(cell, models, options) {
               if (options && options.skipCallbacks) {
-                //Link is removed because of invalid target or removed source/target
+                //Link is removed because of invalid target
               } else {
                 var linkResource = GraphLinks.getSingle(cell);
 
                 if (linkResource) {
                   linkResource.$remove().then(function() {
                     GraphLinks.remove(cell);
-                    $scope.saveGraph();
+                    if (options && options.skipGraphSave) {
+                      //When removing a node, the nodeRemoved callback saves the graph
+                    } else {
+                      $scope.saveGraph();
+                    }
                   }, function(errData) {
                     $scope.$emit('applicationError', { errData: errData });
                   });
