@@ -15,7 +15,7 @@ angular.module('angular-jointjs-graph')
           position: 0.5,
           attrs: {
             text: {
-              text: '  Cannot create link to beneficiary  '
+              text: '  Link not allowed  '
             }
           }
         }

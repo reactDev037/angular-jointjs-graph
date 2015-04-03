@@ -19,7 +19,7 @@ angular.module('angular-jointjs-graph')
             post: function($scope, $element, $attrs, $controller, $transclude) {
               $transclude($scope, function(clone) {
                 $element.find('div.fabric').append(clone.siblings('graph-new-entity').addBack());
-                $element.find('ul.listing').append(clone.siblings('graph-existing-entities'));
+                $element.find('ul').append(clone.siblings('graph-existing-entities'));
               });
             }
           };

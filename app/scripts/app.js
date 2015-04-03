@@ -39,8 +39,8 @@ angular.module('angular-jointjs-graph/templates', [])
               '<span ng-class="showExtended ? \'up\' : \'down\'"></span>\n' +
             '</div>\n' +
           '</div>' +
-          '<div class="extended" ng-show="showExtended">\n' +
-            '<ul class="listing"></ul>\n' +
+          '<div class="listing" ng-show="showExtended">\n' +
+            '<ul></ul>\n' +
           '</div>\n' +
         '</div>'
       );
