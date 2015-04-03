@@ -59,6 +59,10 @@ If you wish to build the scripts from source, run `grunt` in the project root.
 
 Running `grunt test` will run the unit tests with karma.
 
+## Example application
+
+You can find a small application showcasing the framework [here](http://github.com/elsix/angular-jointjs-graph-demo).
+
 ## Overview
 
 The goal of the framework is to visually organize different classes of user specified
