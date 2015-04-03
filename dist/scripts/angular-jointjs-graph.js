@@ -7,32 +7,23 @@ angular.module('angular-jointjs-graph/templates', [])
       $templateCache.put('angular-joints-graph/templates/graph',
         '<div class="organogram">\n' +
           '<section class="chartContainer">\n' +
-            '<div class="chartArea" droppable="handleDrop(entityAttributes, dropPoint)"></div>\n' +
+            '<div class="chartArea" droppable></div>\n' +
             '<div ng-transclude></div>\n' +
           '</section>\n' +
         '</div>'
       );
 
       $templateCache.put('angular-joints-graph/templates/graphNode',
-        '<g class="rotatable">\n' +
-          '<g class="scalable">\n' +
-            '<rect/>\n' +
-          '</g>\n' +
-          '<text class="name"/>\n' +
-          '<text class="country"/>\n' +
-          '<g transform="translate(110, 3)">\n' +
-            '<text class="icon beneficiary" style="font-family:ce-icons;fill:#E5EAEF;"/>\n' +
-            '<text class="icon company" style="font-family:ce-icons;fill:#E5EAEF;"/>\n' +
-          '</g>\n' +
-          '<a class="connection-port" xlink:href="">\n' +
-            '<path d="M0,0 30,0 30,38 0,38" style="fill:white;fill-opacity:0.0;"/>\n' +
+        '<g class="graph-node-template">\n' +
+          '<rect width="260" height="38"/>\n' +
+          '<g ng-transclude></g>\n' +
+          '<g class="connection-port">\n' +
             '<circle class="outer" cx="15" cy="19" r="6"/>\n' +
             '<circle class="inner" cx="15" cy="19" r="2.5"/>\n' +
-          '</a>\n' +
-          '<a class="remove-element" xlink:href="">\n' +
-            '<path d="M220,0 260,0 260,38 220,38" style="fill:white;fill-opacity:0.0;"/>\n' +
+          '</g>\n' +
+          '<g class="remove-element">\n' +
             '<path class="cross" transform="translate(235, 15)" opacity="0.4" d="M0,0 L10,10 M10,0 L0,10"/>\n' +
-          '</a>\n' +
+          '</g>\n' +
         '</g>'
       );
 
@@ -42,12 +33,14 @@ angular.module('angular-jointjs-graph/templates', [])
             '<div class="intro">Drag to create new</div>\n' +
             '<div class="fabric"></div>\n' +
           '</div>\n' +
-          '<a href="" class="switch" ng-click="toggleExtended()">\n' +
-            'or choose from existing\n' +
-            '<i class="ce-icon-caret-down" ng-class="showExtended ? \'rotated\' : \'\'"></i>\n' +
-          '</a>\n' +
-          '<div class="extended" ng-show="showExtended">\n' +
-            '<ul class="listing"></ul>\n' +
+          '<div class="switch-container" ng-click="toggleExtended()" extended="{{showExtended}}">\n' +
+            '<div class="switch">\n' +
+              'or choose from existing\n' +
+              '<span ng-class="showExtended ? \'up\' : \'down\'"></span>\n' +
+            '</div>\n' +
+          '</div>' +
+          '<div class="listing" ng-show="showExtended">\n' +
+            '<ul></ul>\n' +
           '</div>\n' +
         '</div>'
       );
@@ -61,7 +54,9 @@ angular.module('angular-jointjs-graph/templates', [])
       );
 
       $templateCache.put('angular-joints-graph/templates/graphExistingEntities',
-        '<li ng-repeat="entity in existingEntities" ng-hide="entity.show == false" draggable graph-existing-entity></li>'
+        '<li ng-repeat="entity in entities" ng-hide="entity.show == false" draggable graph-existing-entity="{{entityIdentifier}}">\n' +
+          '<div class="remove-entity" ng-click="removeEntity(entity)">&times;</div>\n' +
+        '</li>'
       );
     }
   ]);
@@ -98,16 +93,11 @@ angular.module('angular-jointjs-graph')
 
 'use strict';
 angular.module('angular-jointjs-graph')
-  .directive('droppable', ['$window', '$parse',
-    function ($window, $parse) {
+  .directive('droppable', ['$window',
+    function ($window) {
       return {
-        link: function (scope, element, attrs) {
-          if (!attrs.droppable) {
-            throw new Error('Directive requires a function call expression as argument');
-          }
-
-          var dropFunction = $parse(attrs.droppable),
-            el = element[0];
+        link: function (scope, element) {
+          var el = element[0];
 
           el.addEventListener('dragover', function(e) {
             e.preventDefault();
@@ -130,7 +120,7 @@ angular.module('angular-jointjs-graph')
               dropPoint = $window.g.point(left, top),
               entityAttributes = JSON.parse(e.dataTransfer.getData('entity-attributes'));
 
-            dropFunction(scope, { entityAttributes: entityAttributes, dropPoint: dropPoint });
+            scope.$emit('graphDropEvent', { entityAttributes: entityAttributes, dropPoint: dropPoint });
           });
         }
       };
@@ -139,185 +129,92 @@ angular.module('angular-jointjs-graph')
 
 'use strict';
 angular.module('angular-jointjs-graph')
-  .directive('graph', ['JointGraph', 'JointChartNode', 'JointElementView', 'JointNodeModel', 'JointPaper', 'JointNodeParams', 'FactoryMap', '$q',
-    function(JointGraph, JointChartNode, JointElementView, JointNodeModel, JointPaper, JointNodeParams, FactoryMap, $q) {
+  .directive('graph', ['JointGraph', 'JointChartNode', 'JointElementView', 'JointNodeModel', 'JointPaper', '$q', 'GraphHelpers', 'GraphEntities', 'GraphLinks', 'GraphSelection', 'FactoryMap', 'JointGraphResources',
+    function(JointGraph, JointChartNode, JointElementView, JointNodeModel, JointPaper, $q, GraphHelpers, GraphEntities, GraphLinks, GraphSelection, FactoryMap, JointGraphResources) {
       return {
         restrict: 'E',
         templateUrl: 'angular-joints-graph/templates/graph',
         transclude: true,
         controller: ['$scope', '$element', '$attrs',
           function($scope, $element, $attrs) {
-            FactoryMap.register($attrs.configFactory, 'JointGraphConfig');
-
-            var Config = FactoryMap.get('JointGraphConfig'),
-                modelIdKey = Config.modelIdKey || 'id',
-                self = this;
-
-            FactoryMap.register(Config.linkFactory, 'LinkFactory');
-
-            _.each(Config.entityFactories, function(value, key) {
-              FactoryMap.register(value, key);
-            });
-
-            this.entityModelProperties = function() {
-              var properties = Config.entityModelProperties;
-
-              if (properties) {
-                properties.push(modelIdKey);
-                return properties;
-              } else {
-                return [modelIdKey];
-              }
-            };
-
             $scope.$on('graphResources', function(event, data) {
-              var GraphClass = data.graph,
-                EntitiesClass = data.entities,
-                EntityRelationsClass = data.entityRelations,
-                graphResource = new GraphClass(),
-                successDeferred = $q.defer();
+              JointGraphResources.set(data);
 
-              graphResource.$get().then(function (graph) {
+              data.graph.$get().then(function(graph) {
                 $scope.graph = graph;
-                EntitiesClass.query(function (entities) {
-                  $scope.existingEntities = entities;
-                  EntityRelationsClass.query(function (entityRelations) {
-                    $scope.existingConnections = entityRelations;
-                    successDeferred.resolve();
-                  }, function (errData) {
-                    successDeferred.reject(errData);
-                  });
-                }, function (errData) {
-                  successDeferred.reject(errData);
-                });
-              }, function (errData) {
-                successDeferred.reject(errData);
-              });
-
-              successDeferred.promise.then(function () {
-                JointNodeModel.init($scope);
-                JointElementView.init($element.find('.chartContainer'));
-                JointPaper.init($element.find('.chartArea'));
-                JointPaper.onSelectionChange(function (ids) {
-                  handleSelection(ids);
-                  $scope.$digest();
-                });
-                JointPaper.onCellPositionChange(function () {
-                  $scope.saveGraph();
-                });
-
-                JointGraph.on('add', function (cell) {
-                  if (cell.get('isChartNode')) {
-                    cell.on('createLinkStart', createLinkStart);
-                    cell.on('createLinkEnd', createLinkEnd);
-                    cell.on('nodeRemoved', nodeRemoved);
-                  } else {
-                    cell.on('remove', linkRemoved);
-                  }
-                });
-
-                var graphContent = JSON.parse($scope.graph.content) || {};
-
-                $scope.entityJointModelMap = {};
-
-                if (graphContent.cells) {
-                  _.each(graphContent.cells, function (element) {
-                    if (element.isChartNode) {
-                      var properties = {},
-                          entityKey = element.backendModelParams[modelIdKey];
-
-                      properties[modelIdKey] = entityKey;
-                      $scope.entityJointModelMap[entityKey] = element.id;
-                      _.findWhere($scope.existingEntities, properties).show = false;
-                    }
-                  });
-
-                  JointGraph.addCells(graphContent.cells);
-                }
-              }, function (error) {
+                return $q.all(_.object(_.map(data.entities, function(resource, identifier) {
+                  return [identifier, GraphHelpers.queryResource(resource)];
+                })));
+              }).then(function(entitiesMap) {
+                GraphEntities.set(entitiesMap);
+                $scope.$broadcast('graphEntitiesLoaded', entitiesMap);
+                return GraphHelpers.queryResource(data.entityRelations);
+              }).then(function(entityRelations) {
+                GraphLinks.set(entityRelations);
+                $scope.$broadcast('graphEntityRelationsLoaded', entityRelations);
+              }).then(function() {
+                $scope.$broadcast('graphResourcesLoaded');
+                initGraph();
+              }, function(error) {
                 $scope.$emit('applicationError', { errData: error });
               });
             });
 
-            function getEntityModelValues(resource) {
-              var values = {};
-
-              _.each(self.entityModelProperties(), function(propertyKey) {
-                values[propertyKey] = resource[propertyKey];
+            function initGraph() {
+              JointNodeModel.init($element.find('.graph-node-template')[0].outerHTML);
+              JointElementView.init($element.find('.chartContainer'));
+              JointPaper.init($element.find('.chartArea'));
+              JointPaper.onSelectionChange(function (ids) {
+                GraphSelection.select(ids);
+                $scope.$digest();
+              });
+              JointPaper.onCellPositionChange(function () {
+                $scope.saveGraph();
               });
 
-              return values;
+              JointGraph.on('add', function (cell) {
+                if (cell.get('isChartNode')) {
+                  cell.on('createLinkStart', createLinkStart);
+                  cell.on('createLinkEnd', createLinkEnd);
+                  cell.on('nodeRemoved', nodeRemoved);
+                } else {
+                  cell.on('remove', linkRemoved);
+                }
+              });
+
+              addGraphCells();
             }
 
-            function setParamsForSelection() {
-              var cell = JointGraph.getCell($scope.selection.selectedCellId),
-                modelValues = getEntityModelValues($scope.selection.selectedResource);
+            function addGraphCells() {
+              var graphContent = $scope.graph.content ?
+                    JSON.parse($scope.graph.content) : {};
 
-              if (cell) {
-                cell.attr(JointNodeParams.get(modelValues).attrs);
+              if (graphContent.cells) {
+                _.each(graphContent.cells, function (element) {
+                  if (element.isChartNode) {
+                    GraphEntities.markPresentOnGraph(element);
+                  }
+                });
+
+                JointGraph.addCells(graphContent.cells);
               }
             }
-
-            _.each(this.entityModelProperties(), function(propertyKey) {
-              $scope.$watch('selection.selectedResource.' + propertyKey, function(newValue, oldValue) {
-                if (!oldValue || !$scope.selection) {
-                  return;
-                }
-
-                setParamsForSelection();
-              });
-            });
 
             $scope.clearCellSelectionAndRevert = function() {
-              JointPaper.clearSelection();
-              handleSelection(null);
+              GraphSelection.clearAndRevert();
             };
 
-            $scope.clearCellSelection = function() {
-              JointPaper.clearSelection();
-              $scope.selection = null;
+            $scope.revertSelection = function() {
+              GraphSelection.revertSelection();
             };
 
-            $scope.revertEntity = function() {
-              if ($scope.selection) {
-                angular.copy($scope.selection.masterResource, $scope.selection.selectedResource);
-                setParamsForSelection();
-              }
+            $scope.syncSelection = function() {
+              GraphSelection.syncSelection();
             };
 
-            $scope.syncEntity = function() {
-              if ($scope.selection) {
-                angular.copy($scope.selection.selectedResource, $scope.selection.masterResource);
-              }
+            $scope.selectEntity = function(entity, identifier) {
+              GraphSelection.selectEntity(entity, identifier);
             };
-
-            $scope.selectEntity = function(entity) {
-              handleSelection({
-                backendModelId: entity[modelIdKey],
-                selectedCellId: $scope.entityJointModelMap[entity[modelIdKey]],
-                isChartNode: true
-              });
-            };
-
-            function handleSelection(selectedIds) {
-              $scope.revertEntity();
-
-              if (selectedIds) {
-                var properties = {};
-                properties[modelIdKey] = selectedIds.backendModelId;
-                var entity = selectedIds.isChartNode ? _.findWhere($scope.existingEntities, properties) :
-                  _.findWhere($scope.existingConnections, properties);
-
-                $scope.selection = {
-                  isChartNode: selectedIds.isChartNode,
-                  selectedResource: entity,
-                  selectedCellId: selectedIds.selectedCellId,
-                  masterResource: angular.copy(entity)
-                };
-              } else {
-                $scope.selection = null;
-              }
-            }
 
             $scope.saveGraph = function() {
               setTimeout(function() {
@@ -330,7 +227,7 @@ angular.module('angular-jointjs-graph')
 
             function createLinkStart() {
               $scope.$apply(function() {
-                $scope.clearCellSelectionAndRevert();
+                GraphSelection.clearAndRevert();
               });
             }
 
@@ -339,7 +236,7 @@ angular.module('angular-jointjs-graph')
 
               $scope.$apply(function() {
                 link.createResource().then(function(linkEntity) {
-                  $scope.existingConnections.push(linkEntity);
+                  GraphLinks.addSingle(linkEntity);
                   $scope.saveGraph();
                 }, function(data) {
                   $scope.$emit('applicationError', { errData: data });
@@ -352,45 +249,43 @@ angular.module('angular-jointjs-graph')
               event.preventDefault();
 
               $scope.$apply(function() {
-                var properties = {},
-                    entityKey = model.get('backendModelParams')[modelIdKey];
-
-                properties[modelIdKey] = entityKey;
-
-                var resource = _.findWhere($scope.existingEntities, properties),
-                    selectedResource = $scope.selection ? $scope.selection.selectedResource : null;
+                var resource = GraphEntities.getSingle(model),
+                    selectedResource = GraphSelection.getSelectedEntity();
 
                 if (resource) {
-                  resource.$remove().then(function() {
-                    if (resource === selectedResource) {
-                      $scope.clearCellSelection();
-                    }
+                  if (resource === selectedResource) {
+                    GraphSelection.clear();
+                  }
 
-                    resource.show = true;
-                    delete $scope.entityJointModelMap[entityKey];
-                    $scope.saveGraph();
-                  }, function(errData) {
-                    $scope.$emit('applicationError', { errData: errData });
-                  });
+                  GraphEntities.markRemovedFromGraph(model);
+                  $scope.saveGraph();
                 }
               });
             }
 
+            $scope.$on('removeEntity', function(event, data) {
+              event.stopPropagation();
+              data.entity.$remove().then(function() {
+                GraphEntities.remove(data.entity, data.identifier);
+              }, function(errData) {
+                $scope.$emit('applicationError', { errData: errData });
+              });
+            });
+
             function linkRemoved(cell, models, options) {
               if (options && options.skipCallbacks) {
-                //Link is removed because of invalid target or removed source/target
+                //Link is removed because of invalid target
               } else {
-                var backendModelParams = cell.get('backendModelParams'),
-                  properties = {},
-                  linkResource;
-
-                properties[modelIdKey] = backendModelParams[modelIdKey];
-                linkResource = _.findWhere($scope.existingConnections, properties);
+                var linkResource = GraphLinks.getSingle(cell);
 
                 if (linkResource) {
                   linkResource.$remove().then(function() {
-                    _.remove($scope.existingConnections, properties);
-                    $scope.saveGraph();
+                    GraphLinks.remove(cell);
+                    if (options && options.skipGraphSave) {
+                      //When removing a node, the nodeRemoved callback saves the graph
+                    } else {
+                      $scope.saveGraph();
+                    }
                   }, function(errData) {
                     $scope.$emit('applicationError', { errData: errData });
                   });
@@ -400,24 +295,17 @@ angular.module('angular-jointjs-graph')
 
             function updateResourceList(cellModel) {
               var deferred = $q.defer(),
-                  modelId = cellModel.get('backendModelParams')[modelIdKey];
+                  modelId = cellModel.get('backendModelParams')[GraphHelpers.getModelIdKey()];
 
               if (modelId === 'undefined') {
                 cellModel.createResource().then(function(resource) {
-                  resource.show = false;
-                  $scope.entityJointModelMap[resource[modelIdKey]] = cellModel.id;
-                  $scope.existingEntities.unshift(resource);
+                  GraphEntities.addSingle(cellModel, resource);
                   deferred.resolve({ newNode: true });
                 }, function(errData) {
                   deferred.reject(errData);
                 });
               } else {
-                var properties = {};
-                properties[modelIdKey] = modelId;
-
-                $scope.entityJointModelMap[modelId] = cellModel.id;
-
-                _.findWhere($scope.existingEntities, properties).show = false;
+                GraphEntities.markPresentOnGraph(cellModel);
                 deferred.resolve({ newNode: false });
               }
 
@@ -427,12 +315,18 @@ angular.module('angular-jointjs-graph')
             function highlightCell(cellModel) {
               var cellView = JointPaper.getPaper().findViewByModel(cellModel);
               JointPaper.clearSelection();
-              handleSelection(JointPaper.selectCell(cellView));
+              GraphSelection.select(JointPaper.selectCell(cellView));
             }
 
-            $scope.handleDrop = function(entityAttributes, dropPoint) {
+            FactoryMap.registerFactories($attrs.configFactory);
+            GraphSelection.onSelectionChange(function(selection) {
+              $scope.$broadcast('graphSelection', selection);
+            });
+
+            $scope.$on('graphDropEvent', function(event, data) {
+              event.stopPropagation();
               $scope.$apply(function() {
-                var rect = JointChartNode.create(entityAttributes, dropPoint);
+                var rect = JointChartNode.create(data.entityAttributes, data.dropPoint);
                 JointGraph.addCell(rect);
                 updateResourceList(rect).then(function(data) {
                     if(data.newNode) {
@@ -446,6 +340,35 @@ angular.module('angular-jointjs-graph')
                     rect.remove();
                   });
               });
+            });
+          }
+        ]
+      };
+    }
+  ]);
+
+'use strict';
+angular.module('angular-jointjs-graph')
+  .directive('graphExistingEntities', ['GraphEntities',
+    function(GraphEntities) {
+      return {
+        require: '^graphSidePanelTools',
+        restrict: 'E',
+        templateUrl: 'angular-joints-graph/templates/graphExistingEntities',
+        transclude: true,
+        scope: true,
+        controller: ['$scope', '$attrs', '$transclude',
+          function($scope, $attrs, $transclude) {
+            $scope.transcludeEntities = $transclude;
+
+            $scope.entityIdentifier = $attrs.entityIdentifier;
+
+            $scope.$on('graphResourcesLoaded', function() {
+              $scope.entities = GraphEntities.getForType($scope.entityIdentifier);
+            });
+
+            $scope.removeEntity = function(entity) {
+              $scope.$emit('removeEntity', { entity: entity, identifier: $scope.entityIdentifier });
             };
           }
         ]
@@ -455,44 +378,27 @@ angular.module('angular-jointjs-graph')
 
 'use strict';
 angular.module('angular-jointjs-graph')
-  .directive('graphExistingEntities', [
-    function() {
+  .directive('graphExistingEntity', ['GraphHelpers',
+    function(GraphHelpers) {
       return {
-        require: '^graph',
-        restrict: 'E',
-        templateUrl: 'angular-joints-graph/templates/graphExistingEntities',
-        transclude: true,
-        controller: ['$attrs', '$transclude',
-          function($attrs, $transclude) {
-            this.transclude = $transclude;
-          }
-        ]
-      };
-    }
-  ]);
-
-'use strict';
-angular.module('angular-jointjs-graph')
-  .directive('graphExistingEntity', [
-    function() {
-      return {
-        require: ['^graph', '^graphExistingEntities'],
+        require: '^graphExistingEntities',
         restrict: 'A',
-        link: function($scope, $element, $attrs, $controller) {
-          var modelProperties = $controller[0].entityModelProperties(),
-            liElement = $element[0];
+        link: function($scope, $element, $attrs) {
+          var entityIdentifier = $attrs.graphExistingEntity,
+              modelProperties = GraphHelpers.entityProperties(entityIdentifier),
+              liElement = $element[0];
 
-          if (modelProperties) {
-            _.each(modelProperties, function(property) {
-              liElement.dataset[property] = $scope.entity[property];
+          _.each(modelProperties, function(property) {
+            liElement.dataset[property] = $scope.entity[property];
 
-              $scope.$watch('entity.' + property, function(value) {
-                liElement.dataset[property] = value;
-              });
+            $scope.$watch('entity.' + property, function(value) {
+              liElement.dataset[property] = value;
             });
-          }
+          });
 
-          $controller[1].transclude($scope, function(clone) {
+          liElement.dataset.entityIdentifier = entityIdentifier;
+
+          $scope.transcludeEntities($scope, function(clone) {
             $element.append(clone);
           });
         }
@@ -502,31 +408,43 @@ angular.module('angular-jointjs-graph')
 
 'use strict';
 angular.module('angular-jointjs-graph')
-  .directive('graphNewEntity', ['$compile',
-    function($compile) {
+  .directive('graphNewEntity', ['GraphHelpers',
+    function(GraphHelpers) {
       return {
-        require: '^graph',
+        require: '^graphSidePanelTools',
         restrict: 'E',
         templateUrl: 'angular-joints-graph/templates/graphNewEntity',
         transclude: true,
         link: function ($scope, $element, $attrs, $controller, $transclude) {
-          var element = $element.find('.instance-template')[0],
-            modelProperties = $controller.entityModelProperties();
+          var element = $element.find('.instance-template'),
+              entityIdentifier = $attrs.entityIdentifier,
+              modelProperties  = GraphHelpers.entityProperties(entityIdentifier);
 
           if (modelProperties) {
             _.each(modelProperties, function(property) {
-              element.dataset[property] = undefined;
+              element[0].dataset[property] = undefined;
             });
           }
 
-          element.dataset.entityIdentifier = $attrs.entityIdentifier;
+          element[0].dataset.entityIdentifier = entityIdentifier;
 
           $transclude($scope, function (clone) {
-            $element.children().first().append(clone);
+            element.append(clone);
           });
-
-          return $compile($element.contents())($scope);
         }
+      };
+    }
+  ]);
+
+'use strict';
+angular.module('angular-jointjs-graph')
+  .directive('graphNode', [
+    function() {
+      return {
+        templateUrl: 'angular-joints-graph/templates/graphNode',
+        templateNamespace: 'svg',
+        restrict: 'E',
+        transclude: true
       };
     }
   ]);
@@ -566,7 +484,7 @@ angular.module('angular-jointjs-graph')
             post: function($scope, $element, $attrs, $controller, $transclude) {
               $transclude($scope, function(clone) {
                 $element.find('div.fabric').append(clone.siblings('graph-new-entity').addBack());
-                $element.find('ul.listing').append(clone.siblings('graph-existing-entities'));
+                $element.find('ul').append(clone.siblings('graph-existing-entities'));
               });
             }
           };
@@ -581,16 +499,37 @@ angular.module('angular-jointjs-graph')
     function($injector) {
       var factoriesMap = {};
 
+      function registerFactory(factoryName, alias) {
+        factoriesMap[alias || factoryName] = factoryName;
+      }
+
       return {
-        register: function(factoryName, alias) {
-          if ($injector.has(factoryName)) {
-            factoriesMap[alias || factoryName] = factoryName;
-          } else {
-            throw new Error('Factory ' + factoryName + ' is not registered with any loaded module.' );
+        registerFactories: function(configFactoryName) {
+          if (configFactoryName) {
+            registerFactory(configFactoryName, 'JointGraphConfig');
+
+            // This line is unguarded deliberately. A config factory must be provided by the user
+            var Config = $injector.get(configFactoryName);
+
+            registerFactory(Config.linkCreationCallbacks, 'LinkFactory');
+            registerFactory(Config.entityMarkupParams, 'JointNodeParams');
+            registerFactory(Config.linkMarkupParams, 'JointLinkParams');
+
+            _.each(Config.entityCreationCallbacks, function(value, key) {
+              registerFactory(value, key);
+            });
           }
         },
         get: function(nameOrAlias) {
-          return $injector.get(factoriesMap[nameOrAlias], null);
+          try {
+            if (factoriesMap[nameOrAlias]) {
+              return $injector.get(factoriesMap[nameOrAlias], null);
+            } else {
+              return null;
+            }
+          } catch(e) {
+            return null;
+          }
         }
       };
     }
@@ -598,14 +537,107 @@ angular.module('angular-jointjs-graph')
 
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointChartLink', ['$injector', '$q', 'JointLinkDefaults', 'JointResourceModel', 'FactoryMap',
-    function($injector, $q, JointLinkDefaults, JointResourceModel, FactoryMap) {
-      function getProperties() {
-        var Config = FactoryMap.get('JointGraphConfig'),
-            modelIdKey = Config.modelIdKey,
-            properties = Config.linkModelProperties;
+  .factory('GraphEntities', ['GraphHelpers',
+    function(GraphHelpers) {
+      var entities = {},
+          entityToJointModelMap = {};
 
-        if (properties) {
+      function getIdHash(uniqueId) {
+        var properties = {},
+            modelIdKey = GraphHelpers.getModelIdKey();
+
+        properties[modelIdKey] = uniqueId;
+        return properties;
+      }
+
+      function getIdentifiers(graphModel) {
+        var backendModelParams = graphModel.backendModelParams || graphModel.get('backendModelParams'),
+            typeIdentifier = backendModelParams.entityIdentifier,
+            modelIdKey = GraphHelpers.getModelIdKey(),
+            uniqueId = backendModelParams[modelIdKey];
+
+        return { typeIdentifier: typeIdentifier, uniqueId: uniqueId };
+      }
+
+      return {
+        set: function(entitiesMap) {
+          _.each(entitiesMap, function(value, identifier) {
+            entities[identifier] = value;
+            entityToJointModelMap[identifier] = {};
+          });
+        },
+        addSingle: function(graphElement, entity) {
+          var ids = getIdentifiers(graphElement);
+
+          entity.show = false;
+          entityToJointModelMap[ids.typeIdentifier][ids.uniqueId] = graphElement.id;
+          entities[ids.typeIdentifier].unshift(entity);
+        },
+        getSingle: function(graphElement) {
+          var ids = getIdentifiers(graphElement);
+          return _.findWhere(entities[ids.typeIdentifier], getIdHash(ids.uniqueId));
+        },
+        getForType: function(identifier) {
+          return entities[identifier];
+        },
+        markPresentOnGraph: function(graphElement) {
+          var ids = getIdentifiers(graphElement);
+
+          entityToJointModelMap[ids.typeIdentifier][ids.uniqueId] = graphElement.id;
+          var entity = _.findWhere(entities[ids.typeIdentifier], getIdHash(ids.uniqueId));
+
+          if (entity) {
+            entity.show = false;
+          }
+        },
+        markRemovedFromGraph: function(graphElement) {
+          var ids = getIdentifiers(graphElement);
+
+          delete entityToJointModelMap[ids.typeIdentifier][ids.uniqueId];
+          var entity = _.findWhere(entities[ids.typeIdentifier], getIdHash(ids.uniqueId));
+
+          if (entity) {
+            entity.show = true;
+          }
+        },
+        jointModelId: function(typeIdentifier, entity) {
+          return entityToJointModelMap[typeIdentifier][entity[GraphHelpers.getModelIdKey()]];
+        },
+        remove: function(entity, identifier) {
+          var entityId = entity[GraphHelpers.getModelIdKey()],
+              entityIndex = entities[identifier].indexOf(entity);
+
+          delete entityToJointModelMap[identifier][entityId];
+          entities[identifier].splice(entityIndex, 1);
+        }
+      };
+    }
+  ]);
+
+'use strict';
+angular.module('angular-jointjs-graph')
+  .factory('GraphHelpers', ['$q', 'FactoryMap',
+    function($q, FactoryMap) {
+      function getProperties(identifier) {
+        var Config = FactoryMap.get('JointGraphConfig'),
+            modelIdKey,
+            properties;
+
+        if (Config) {
+          modelIdKey = Config.modelIdKey || 'id';
+
+          if (identifier) {
+            properties = Config.entityModelProperties ?
+              Config.entityModelProperties[identifier] : null;
+          } else {
+            properties = Config.linkModelProperties;
+          }
+        } else {
+          modelIdKey = 'id';
+          properties = null;
+        }
+
+        if (_.isArray(properties)) {
           properties.push(modelIdKey);
           return properties;
         } else {
@@ -613,11 +645,188 @@ angular.module('angular-jointjs-graph')
         }
       }
 
+      function getModelIdKey() {
+        var Config = FactoryMap.get('JointGraphConfig');
+        return (Config && Config.modelIdKey) ? Config.modelIdKey : 'id';
+      }
+
+      return {
+        queryResource: function(resourceClass) {
+          var deferred = $q.defer();
+
+          resourceClass.query(function(response) {
+            deferred.resolve(response);
+          }, function(error) {
+            deferred.reject(error);
+          });
+
+          return deferred.promise;
+        },
+        getModelIdKey: getModelIdKey,
+        entityProperties: function(identifier) {
+          return getProperties(identifier);
+        },
+        linkProperties: function() {
+          return getProperties();
+        }
+      };
+    }
+  ]);
+
+'use strict';
+angular.module('angular-jointjs-graph')
+  .factory('GraphLinks', ['GraphHelpers',
+    function(GraphHelpers) {
+      var links = [];
+
+      function getIdHash(graphModel) {
+        var backendModelParams = graphModel.get('backendModelParams'),
+            properties = {},
+            modelIdKey = GraphHelpers.getModelIdKey();
+
+        properties[modelIdKey] = backendModelParams[modelIdKey];
+        return properties;
+      }
+
+      return {
+        set: function(linksArray) {
+          links = linksArray;
+        },
+        addSingle: function(entity) {
+          links.push(entity);
+        },
+        getSingle: function(graphElement) {
+          return _.findWhere(links, getIdHash(graphElement));
+        },
+        remove: function(graphElement) {
+          _.remove(links, getIdHash(graphElement));
+        }
+      };
+    }
+  ]);
+
+'use strict';
+angular.module('angular-jointjs-graph')
+  .factory('GraphSelection', ['JointGraph', 'JointPaper', 'GraphHelpers', 'GraphEntities', 'GraphLinks', 'FactoryMap',
+    function(JointGraph, JointPaper, GraphHelpers, GraphEntities, GraphLinks, FactoryMap) {
+      var selection,
+          selectionChangeCallback;
+
+      function updateSelection() {
+        var cell = JointGraph.getCell(selection.selectedCellId);
+
+        if (cell) {
+          var modelValues = {},
+              isChartNode = cell.get('isChartNode'),
+              paramsFactory = isChartNode ?
+                FactoryMap.get('JointNodeParams') :
+                FactoryMap.get('JointLinkParams');
+
+          if (paramsFactory) {
+            var properties = isChartNode ?
+                GraphHelpers.entityProperties(selection.entityIdentifier) :
+                GraphHelpers.linkProperties();
+
+            _.each(properties, function(propertyKey) {
+              modelValues[propertyKey] = selection.selectedResource[propertyKey];
+            });
+
+            var attributes = paramsFactory.get(modelValues).attrs;
+
+            if (attributes) {
+              cell.attr(attributes);
+            }
+          }
+        }
+      }
+
+      function notifySelectionChange() {
+        if (_.isFunction(selectionChangeCallback)) {
+          selectionChangeCallback(selection);
+        }
+      }
+
+      return {
+        onSelectionChange: function(callback) {
+          selectionChangeCallback = callback;
+        },
+        select: function(selectedIds) {
+          this.revertSelection();
+
+          if (selectedIds) {
+            var cell = JointGraph.getCell(selectedIds.selectedCellId),
+                entity = selectedIds.isChartNode ?
+                  GraphEntities.getSingle(cell) :
+                  GraphLinks.getSingle(cell);
+
+            selection = {
+              isChartNode: selectedIds.isChartNode,
+              selectedResource: entity,
+              selectedCellId: selectedIds.selectedCellId,
+              masterResource: angular.copy(entity),
+              entityIdentifier: selectedIds.entityIdentifier
+            };
+          } else {
+            selection = null;
+          }
+
+          notifySelectionChange();
+        },
+        selectEntity: function(entity, identifier) {
+          this.select({
+            backendModelId: entity[GraphHelpers.getModelIdKey()],
+            selectedCellId: GraphEntities.jointModelId(identifier, entity),
+            isChartNode: true,
+            entityIdentifier: identifier
+          });
+        },
+        getSelectedEntity: function() {
+          return selection ? selection.selectedResource : null;
+        },
+        revertSelection: function() {
+          if (selection) {
+            angular.copy(selection.masterResource, selection.selectedResource);
+            updateSelection();
+            notifySelectionChange();
+          }
+        },
+        syncSelection: function() {
+          if (selection) {
+            angular.copy(selection.selectedResource, selection.masterResource);
+            updateSelection();
+            notifySelectionChange();
+          }
+        },
+        clear: function() {
+          JointPaper.clearSelection();
+          selection = null;
+          notifySelectionChange();
+        },
+        clearAndRevert: function() {
+          JointPaper.clearSelection();
+          if (selection) {
+            angular.copy(selection.masterResource, selection.selectedResource);
+            updateSelection();
+          }
+          selection = null;
+          notifySelectionChange();
+        }
+      };
+    }
+  ]);
+
+'use strict';
+angular.module('angular-jointjs-graph')
+  .factory('JointChartLink', ['$q', 'JointLinkDefaults', 'JointResourceModel', 'FactoryMap', 'GraphHelpers', 'JointGraphResources',
+    function($q, JointLinkDefaults, JointResourceModel, FactoryMap, GraphHelpers, JointGraphResources) {
       return {
         create: function(params) {
-          var Factory = JointResourceModel.forLink(FactoryMap.get('LinkFactory')),
+          var configObject = FactoryMap.get('LinkFactory') || {};
+          configObject.resource = JointGraphResources.get().entityRelations;
+
+          var Factory = JointResourceModel.forLink(configObject),
               backendModelParams = {},
-              properties = getProperties();
+              properties = GraphHelpers.linkProperties();
 
           _.each(properties, function(prop) {
             backendModelParams[prop] = 'undefined';
@@ -625,7 +834,7 @@ angular.module('angular-jointjs-graph')
 
           var defaults = {
             backendModelParams: backendModelParams,
-            attrs: JointLinkDefaults.newLinkAttributes,
+            attrs: JointLinkDefaults.get(backendModelParams).attrs,
             isChartNode: false
           };
 
@@ -637,11 +846,15 @@ angular.module('angular-jointjs-graph')
 
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointChartNode', ['$injector', 'JointResourceModel', 'FactoryMap',
-    function($injector, JointResourceModel, FactoryMap) {
+  .factory('JointChartNode', ['JointResourceModel', 'FactoryMap', 'GraphHelpers', 'JointGraphResources',
+    function(JointResourceModel, FactoryMap, GraphHelpers, JointGraphResources) {
       function getFactory(entityAttributes) {
-        if (entityAttributes.entityIdentifier) {
-          return JointResourceModel.forNewEntity(FactoryMap.get(entityAttributes.entityIdentifier));
+        if (entityAttributes[GraphHelpers.getModelIdKey()] === 'undefined') {
+          var entityIdentifier = entityAttributes.entityIdentifier,
+              configObject = FactoryMap.get(entityIdentifier) || {};
+
+          configObject.resource = JointGraphResources.get().entities[entityIdentifier];
+          return JointResourceModel.forNewEntity(configObject);
         } else {
           return JointResourceModel.forExistingEntity();
         }
@@ -649,20 +862,20 @@ angular.module('angular-jointjs-graph')
 
       return {
         create: function(entityAttributes, dropPoint) {
-          var Factory = getFactory(entityAttributes),
-            params = {
-              position: { x: dropPoint.x, y: dropPoint.y },
-              backendModelParams: entityAttributes,
-              options: { interactive: true },
-              isChartNode: true
-            };
+          var EntityFactory = getFactory(entityAttributes),
+              ParamsFactory = FactoryMap.get('JointNodeParams'),
+              params = {
+                position: { x: dropPoint.x, y: dropPoint.y },
+                backendModelParams: entityAttributes,
+                options: { interactive: true },
+                isChartNode: true
+              };
 
-          if ($injector.has('JointNodeParams')) {
-            var ModelParams = $injector.get('JointNodeParams');
-            angular.extend(params, ModelParams.get(entityAttributes));
+          if (ParamsFactory) {
+            angular.extend(params, ParamsFactory.get(entityAttributes));
           }
 
-          return Factory.create(params);
+          return EntityFactory.create(params);
         }
       };
     }
@@ -694,7 +907,7 @@ angular.module('angular-jointjs-graph')
 
             removeElementView.on('click', function(event) {
               _.each(self.paper.model.getConnectedLinks(self.model), function(link) {
-                link.remove({ skipCallbacks: true });
+                link.remove({ skipGraphSave: true });
               });
               self.model.remove();
               self.model.trigger('nodeRemoved', event, self.model);
@@ -729,7 +942,7 @@ angular.module('angular-jointjs-graph')
             this.linkView.startArrowheadMove('target');
 
             this.link.on('change:target', function (link) {
-              // we short-circuit the allowed function to avoid self-highlighting
+              // we short-circuit the allowed function to avoid highlighting self as forbidden
               if (link.invalidTarget() || link.allowed()) {
                 link.colorLinkAllowed();
                 link.removeLinkLabels();
@@ -804,28 +1017,28 @@ angular.module('angular-jointjs-graph')
 
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointLinkDefaults', ['$injector',
-    function($injector) {
-      var values = {
-        linkConnectionColorAllowed: '#66AC3F',
-        linkMarkerColorAllowed: '#66AC3F',
-        linkConnectionColorForbidden: '#C4434B',
-        linkMarkerColorForbidden: '#C4434B',
-        linkConnectionColorCreated: '#AAAAAA',
-        linkMarkerColorCreated: '#AAAAAA',
-        linkConnectionWidthCreated: 1,
-        linkForbiddenCaption: '  Cannot create link to beneficiary  '
-      };
+  .factory('JointGraphResources', [
+    function() {
+      var resources;
 
+      return {
+        set: function(resourcesObj) {
+          resources = resourcesObj;
+        },
+        get: function() {
+          return resources;
+        }
+      };
+    }
+  ]);
+
+'use strict';
+angular.module('angular-jointjs-graph')
+  .factory('JointLinkDefaults', ['FactoryMap',
+    function(FactoryMap) {
       var defaults = {
-        newLinkAttributes: {
-          '.connection': {
-            stroke: values.linkConnectionColorCreated,
-            'stroke-width': 3
-          },
+        attrs: {
           '.marker-target': {
-            fill: values.linkMarkerColorCreated,
-            'stroke-width': 0,
             d: 'M 10 0 L 0 5 L 10 10 z'
           },
           '.marker-source': {display: 'none'},
@@ -835,25 +1048,24 @@ angular.module('angular-jointjs-graph')
         linkForbiddenLabel: {
           position: 0.5,
           attrs: {
-            rect: {
-              fill: values.linkConnectionColorForbidden,
-              stroke: values.linkConnectionColorForbidden,
-              'stroke-width': '5'
-            },
             text: {
-              fill: 'white',
-              text: values.linkForbiddenCaption,
-              'font-weight': 'normal'
+              text: '  Link not allowed  '
             }
           }
         }
       };
 
-      if ($injector.has('JointLinkParams')) {
-        angular.extend(defaults, values, $injector.get('JointLinkParams'));
-      }
+      return {
+        get: function(backendModelParams) {
+          var paramsFactory = FactoryMap.get('JointLinkParams');
 
-      return defaults;
+          if (paramsFactory) {
+            angular.extend(defaults, paramsFactory.get(backendModelParams));
+          }
+
+          return defaults;
+        }
+      };
     }
   ]);
 
@@ -861,123 +1073,138 @@ angular.module('angular-jointjs-graph')
 angular.module('angular-jointjs-graph')
   .factory('JointLinkModel', ['$window', 'JointPaper', 'JointLinkDefaults',
     function($window, JointPaper, JointLinkDefaults) {
-      var LinkModel = $window.joint.dia.Link.extend();
+      var LinkModel;
 
-      //Any methods that should be common to all node instances should be prototyped
-      //on the new constructor class here.
-
-      LinkModel.prototype.colorLinkAllowed = function() {
-        this.attr('.connection/stroke', JointLinkDefaults.linkConnectionColorAllowed);
-        this.attr('.marker-target/fill', JointLinkDefaults.linkMarkerColorAllowed);
-      };
-
-      LinkModel.prototype.colorLinkForbidden = function() {
-        this.attr('.connection/stroke', JointLinkDefaults.linkConnectionColorForbidden);
-        this.attr('.marker-target/fill', JointLinkDefaults.linkMarkerColorForbidden);
-      };
-
-      LinkModel.prototype.colorLinkCreated = function() {
-        this.attr('.connection/stroke-width', JointLinkDefaults.linkConnectionWidthCreated);
-        this.attr('.connection/stroke', JointLinkDefaults.linkConnectionColorCreated);
-        this.attr('.marker-target/fill', JointLinkDefaults.linkMarkerColorCreated);
-      };
-
-      LinkModel.prototype.addLinkForbiddenLabel = function() {
-        this.set('labels', [JointLinkDefaults.linkForbiddenLabel]);
-      };
-
-      LinkModel.prototype.removeLinkLabels = function() {
-        this.unset('labels');
-      };
-
-      function getSourceAndTargetViews(link) {
-        var paper = JointPaper.getPaper(),
-          linkView = paper.findViewByModel(link),
-          sourceView = linkView.sourceView,
-          targetView;
-
-        if (linkView.targetView) {
-          targetView = linkView.targetView;
-        } else {
-          var target = link.get('target');
-          targetView = paper.findViewsFromPoint($window.g.point(target.x, target.y))[0];
-        }
-
-        return [sourceView, targetView];
-      }
-
-      LinkModel.prototype.toggleForbiddenHighlight = function(toggleOn) {
-        _.each(getSourceAndTargetViews(this), function(view) {
-          if (view) {
-            var selector = $window.V(view.el),
-              method = toggleOn ? selector.addClass : selector.removeClass;
-
-            method.call(selector, 'nolink');
-          }
-        });
-      };
-
-      LinkModel.prototype.addForbiddenHighlight = function() {
-        this.toggleForbiddenHighlight(true);
-      };
-
-      LinkModel.prototype.removeForbiddenHighlight = function() {
-        this.toggleForbiddenHighlight(false);
-      };
-
-      LinkModel.prototype.addLinkMidpoint = function() {
-        var linkView =JointPaper.getPaper().findViewByModel(this),
-          vertexPoint = $window.g.line(
-            $window.g.point(linkView.sourcePoint),
-            $window.g.point(linkView.targetPoint)
-          ).midpoint();
-
-        this.set('vertices', [{
-          x: vertexPoint.x,
-          y: vertexPoint.y
-        }]);
-        this.attr('.marker-vertex/r', '5');
-      };
-
-      LinkModel.prototype.allowed = function() {
-        if (JointLinkDefaults.canCreateLink) {
-          return JointLinkDefaults.canCreateLink.apply(null, getSourceAndTargetViews(this));
-        } else {
-          return true;
-        }
-      };
-
-      LinkModel.prototype.invalidTarget = function() {
-        var endViews = getSourceAndTargetViews(this),
-          emptyTarget = !endViews[1],
-          sameObject = endViews[0] === endViews[1];
-
-        return emptyTarget || sameObject;
-      };
-
-      return {
-        getConstructor: function() {
+      function createModel() {
+        if (LinkModel) {
           return LinkModel;
         }
+
+        var linkDefaults = JointLinkDefaults.get();
+
+        LinkModel = $window.joint.dia.Link.extend();
+        //Any methods that should be common to all node instances should be prototyped
+        //on the new constructor class here.
+
+        LinkModel.prototype.colorLinkAllowed = function() {
+          var selector = $window.V(JointPaper.getPaper().findViewByModel(this).el);
+          selector.removeClass('forbidden');
+          selector.addClass('allowed');
+        };
+
+        LinkModel.prototype.colorLinkForbidden = function() {
+          var selector = $window.V(JointPaper.getPaper().findViewByModel(this).el);
+          selector.removeClass('allowed');
+          selector.addClass('forbidden');
+        };
+
+        LinkModel.prototype.colorLinkCreated = function() {
+          var selector = $window.V(JointPaper.getPaper().findViewByModel(this).el);
+          selector.removeClass('allowed');
+          selector.removeClass('forbidden');
+        };
+
+        LinkModel.prototype.addLinkForbiddenLabel = function() {
+          this.set('labels', [linkDefaults.linkForbiddenLabel]);
+        };
+
+        LinkModel.prototype.removeLinkLabels = function() {
+          this.unset('labels');
+        };
+
+        function getSourceAndTargetViews(link) {
+          var paper = JointPaper.getPaper(),
+            linkView = paper.findViewByModel(link),
+            sourceView = linkView.sourceView,
+            targetView;
+
+          if (linkView.targetView) {
+            targetView = linkView.targetView;
+          } else {
+            var target = link.get('target');
+            targetView = paper.findViewsFromPoint($window.g.point(target.x, target.y))[0];
+          }
+
+          return [sourceView, targetView];
+        }
+
+        LinkModel.prototype.toggleForbiddenHighlight = function(toggleOn) {
+          _.each(getSourceAndTargetViews(this), function(view) {
+            if (view) {
+              var selector = $window.V(view.el),
+                method = toggleOn ? selector.addClass : selector.removeClass;
+
+              method.call(selector, 'nolink');
+            }
+          });
+        };
+
+        LinkModel.prototype.addForbiddenHighlight = function() {
+          this.toggleForbiddenHighlight(true);
+        };
+
+        LinkModel.prototype.removeForbiddenHighlight = function() {
+          this.toggleForbiddenHighlight(false);
+        };
+
+        LinkModel.prototype.addLinkMidpoint = function() {
+          var linkView =JointPaper.getPaper().findViewByModel(this),
+            vertexPoint = $window.g.line(
+              $window.g.point(linkView.sourcePoint),
+              $window.g.point(linkView.targetPoint)
+            ).midpoint();
+
+          this.set('vertices', [{
+            x: vertexPoint.x,
+            y: vertexPoint.y
+          }]);
+          this.attr('.marker-vertex/r', '5');
+        };
+
+        LinkModel.prototype.allowed = function() {
+          if (this.invalidTarget()) {
+            return false;
+          }
+
+          if (linkDefaults.canCreateLink) {
+            return linkDefaults.canCreateLink.apply(null, getSourceAndTargetViews(this));
+          } else {
+            return true;
+          }
+        };
+
+        LinkModel.prototype.invalidTarget = function() {
+          var endViews = getSourceAndTargetViews(this),
+            emptyTarget = !endViews[1],
+            sameObject = endViews[0] === endViews[1];
+
+          return emptyTarget || sameObject;
+        };
+
+        return LinkModel;
+      }
+
+      return {
+        getConstructor: createModel
       };
     }
   ]);
 
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointNodeModel', ['$window', '$compile', '$templateCache',
-    function($window, $compile, $templateCache) {
+  .factory('JointNodeModel', ['$window',
+    function($window) {
       var ModelConstructor;
 
       return {
-        init: function($scope) {
+        init: function(markup) {
           ModelConstructor = $window.joint.shapes.basic.Rect.extend({
-            markup: $compile($templateCache.get('angular-joints-graph/templates/graphNode'))($scope)[0].outerHTML,
-            defaults: $window.joint.util.deepSupplement({
+            markup: markup,
+            defaults: {
               // The corresponding html.ElementView is defined
               // in the JointElementView service.
               type: 'html.Element'
-            }, $window.joint.shapes.basic.Rect.prototype.defaults)
+            }
           });
 
           //Any methods that should be common to all node instances should be prototyped
@@ -988,10 +1215,6 @@ angular.module('angular-jointjs-graph')
           };
         },
         getConstructor: function() {
-          if (_.isUndefined(ModelConstructor)) {
-            throw new Error('Factory has not been initialized yet, use init($scope)');
-          }
-
           return ModelConstructor;
         }
       };
@@ -1000,8 +1223,8 @@ angular.module('angular-jointjs-graph')
 
 'use strict';
 angular.module('angular-jointjs-graph')
-  .factory('JointPaper', ['$window', 'JointGraph', 'FactoryMap',
-    function($window, JointGraph, FactoryMap) {
+  .factory('JointPaper', ['$window', 'JointGraph', 'GraphHelpers',
+    function($window, JointGraph, GraphHelpers) {
       var paper,
           selectedModelId;
 
@@ -1038,10 +1261,16 @@ angular.module('angular-jointjs-graph')
 
           var backendModelParams = cellView.model.get('backendModelParams'),
             isChartNode = cellView.model.get('isChartNode') ? true : false,
-            modelIdKey = FactoryMap.get('JointGraphConfig').modelIdKey || 'id',
-            backendModelId = backendModelParams[modelIdKey];
+            modelIdKey = GraphHelpers.getModelIdKey(),
+            backendModelId = backendModelParams[modelIdKey],
+            identifier = backendModelParams.entityIdentifier;
 
-          return { backendModelId: backendModelId, selectedCellId: selectedModelId, isChartNode: isChartNode };
+          return {
+            backendModelId: backendModelId,
+            selectedCellId: selectedModelId,
+            isChartNode: isChartNode,
+            entityIdentifier: identifier
+          };
         },
         onSelectionChange: function(callback) {
           var self = this;
@@ -1108,22 +1337,18 @@ angular.module('angular-jointjs-graph')
         };
       }
 
-      function createFactoryForExisting(JointModel, argsFactory) {
-        if (_.isUndefined(argsFactory.resource)) {
-          throw new Error('Entity and link factories must return an object declaring a resource field');
-        }
-
+      function createFactoryForExisting(JointModel, configObject) {
         var Model = wrapModel(JointModel);
         Model.prototype.createResource = function() {
           var deferred = $q.defer(),
             postData = {},
             self = this;
 
-          if (_.isFunction(argsFactory.postDataFn)) {
-            postData = argsFactory.postDataFn(this);
+          if (_.isFunction(configObject.postDataFn)) {
+            postData = configObject.postDataFn(this);
           }
 
-          argsFactory.resource.save({}, postData, function(response) {
+          configObject.resource.save({}, postData, function(response) {
             var params = self.get('backendModelParams');
 
             _.each(params, function(value, key) {
@@ -1132,8 +1357,8 @@ angular.module('angular-jointjs-graph')
               }
             });
 
-            if (_.isFunction(argsFactory.modelUpdateCallback)) {
-              argsFactory.modelUpdateCallback(self, response);
+            if (_.isFunction(configObject.modelUpdateCallback)) {
+              configObject.modelUpdateCallback(self, response);
             }
 
             deferred.resolve(response);
@@ -1151,11 +1376,11 @@ angular.module('angular-jointjs-graph')
         forExistingEntity: function() {
           return new Factory(wrapModel(JointNodeModel));
         },
-        forNewEntity: function(argsFactory) {
-          return createFactoryForExisting(JointNodeModel, argsFactory);
+        forNewEntity: function(configObject) {
+          return createFactoryForExisting(JointNodeModel, configObject);
         },
-        forLink: function(argsFactory) {
-          return createFactoryForExisting(JointLinkModel, argsFactory);
+        forLink: function(configObject) {
+          return createFactoryForExisting(JointLinkModel, configObject);
         }
       };
     }

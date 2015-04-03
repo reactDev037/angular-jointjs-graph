@@ -6,7 +6,7 @@
 }
 .organogram .chartContainer svg {
   display: block;
-  background: #f6f8f9 url('../images/grid-bg.svg') -3px -3px;
+  background: #f6f8f9 url('data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiCiAgICAgeD0iMHB4IiB5PSIwcHgiIHdpZHRoPSIyNXB4IiBoZWlnaHQ9IjI1cHgiIHZpZXdCb3g9IjAgMCAyNSAyNSIgZW5hYmxlLWJhY2tncm91bmQ9Im5ldyAwIDAgMjUgMjUiPgogIDxnIG9wYWNpdHk9IjAuMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMUUxRTFDIj4KICAgIDxnIHN0cm9rZS13aWR0aD0iMC4yIj4KICAgICAgPGxpbmUgeDE9IjIuMTU1IiB5MT0iMCIgeDI9IjIuMTU1IiB5Mj0iMjUiLz4KICAgICAgPGxpbmUgeDE9IjAiIHkxPSIyLjE1NSIgeDI9IjI1IiB5Mj0iMi4xNTUiLz4KICAgIDwvZz4KICAgIDxnIHN0cm9rZS13aWR0aD0iMC4xIj4KICAgICAgPGxpbmUgeDE9IjIuMTU1IiB5MT0iMCIgeDI9IjIuMTU1IiB5Mj0iMjUiLz4KICAgICAgPGxpbmUgeDE9IjEwLjQzMiIgeTE9IjAiIHgyPSIxMC40MzIiIHkyPSIyNSIvPgogICAgICA8bGluZSB4MT0iMTguNzA3IiB5MT0iMCIgeDI9IjE4LjcwNyIgeTI9IjI1Ii8+CiAgICAgIDxsaW5lIHgxPSIwIiB5MT0iMjIuODQ1IiB4Mj0iMjUiIHkyPSIyMi44NDUiLz4KICAgICAgPGxpbmUgeDE9IjAiIHkxPSIxNC41NjgiIHgyPSIyNSIgeTI9IjE0LjU2OCIvPgogICAgICA8bGluZSB4MT0iMCIgeTE9IjYuMjkzIiB4Mj0iMjUiIHkyPSI2LjI5MyIvPgogICAgICA8bGluZSB4MT0iMCIgeTE9IjE4LjcwNyIgeDI9IjI1IiB5Mj0iMTguNzA3Ii8+CiAgICAgIDxsaW5lIHgxPSIwIiB5MT0iMTAuNDMyIiB4Mj0iMjUiIHkyPSIxMC40MzIiLz4KICAgICAgPGxpbmUgeDE9IjAiIHkxPSIyLjE1NSIgeDI9IjI1IiB5Mj0iMi4xNTUiLz4KICAgICAgPGxpbmUgeDE9IjYuMjkzIiB5MT0iMCIgeDI9IjYuMjkzIiB5Mj0iMjUiLz4KICAgICAgPGxpbmUgeDE9IjE0LjU2OCIgeTE9IjAiIHgyPSIxNC41NjgiIHkyPSIyNSIvPgogICAgICA8bGluZSB4MT0iMjIuODQ1IiB5MT0iMCIgeDI9IjIyLjg0NSIgeTI9IjI1Ii8+CiAgICA8L2c+CiAgPC9nPgo8L3N2Zz4K') -3px -3px;
   box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.1);
 }
 .organogram .chartContainer {
@@ -22,10 +22,7 @@
 .organogram .chartArea .element.html rect {
   stroke-width: 1;
   stroke: #ccc;
-}
-.organogram .chartArea .element.html .country {
-  font-size: 10px;
-  fill: rgba(0, 0, 0, 0.33);
+  fill: white;
 }
 .organogram .chartArea .element.html.highlighted {
   outline: 0 solid #66ac3f;
@@ -34,14 +31,8 @@
   stroke: #66ac3f;
   stroke-width: 3;
 }
-.organogram .chartArea .element.html.highlighted .icon path {
-  fill: #66ac3f;
-}
 .organogram .chartArea .element.html.highlighted.nolink rect {
   stroke: #c4434b;
-}
-.organogram .chartArea .element.html.highlighted.nolink .icon path {
-  fill: #c4434b;
 }
 .organogram .chartArea .element.html.source-view rect {
   stroke: #66ac3f;
@@ -53,9 +44,6 @@
 .organogram .chartArea .element.html.selected rect {
   stroke: #efbe2c;
   stroke-width: 2;
-}
-.organogram .chartArea .element.html.selected .icon path {
-  fill: #efbe2c;
 }
 .organogram .chartArea .element.html .remove-element .cross {
   stroke: black;
@@ -76,18 +64,35 @@
 .organogram .chartArea .element.html .remove-element {
   opacity: 0;
   transition: all linear 0.1s;
-}
-.organogram .chartArea .element.html .icon {
-  opacity: 1;
-  transition: all linear 0.1s;
+  cursor: pointer;
 }
 .organogram .chartArea .element.html:hover .remove-element {
   opacity: 1;
   transition: all linear 0.1s;
 }
-.organogram .chartArea .element.html:hover .icon {
-  opacity: 0;
-  transition: all linear 0.1s;
+.organogram .chartArea .link .connection {
+  stroke: #AAAAAA;
+  stroke-width: 1px;
+}
+.organogram .chartArea .link .marker-target {
+  stroke-width: 0;
+  fill: #AAAAAA;
+}
+.organogram .chartArea .link.forbidden .connection {
+  stroke: #c4434b;
+  stroke-width: 3px;
+}
+.organogram .chartArea .link.forbidden .marker-target {
+  stroke-width: 0;
+  fill: #c4434b;
+}
+.organogram .chartArea .link.allowed .connection {
+  stroke: #66ac3f;
+  stroke-width: 3px;
+}
+.organogram .chartArea .link.allowed .marker-target {
+  stroke-width: 0;
+  fill: #66ac3f;
 }
 .organogram .chartArea .link.selected .connection {
   stroke: #efbe2c;
@@ -109,6 +114,15 @@
   cursor: default;
   opacity: 0;
 }
+.organogram .chartArea .link .label rect {
+  fill: #c4434b;
+  stroke: #c4434b;
+  stroke-width: 5;
+}
+.organogram .chartArea .link .label text {
+  fill: white;
+  font-weight: normal;
+}
 .organogram .chartArea .connection-wrap {
   stroke-linecap: butt;
   stroke-width: 10;
@@ -126,55 +140,55 @@
 .organogram .chartArea .marker-arrowheads {
   display: none;
 }
+.graph-tools {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+}
 .graph-tools > * {
-  width: 228px;
+  min-width: 186px;
 }
 .graph-tools .basic {
-  position: absolute;
-  left: 10px;
-  top: 10px;
-  height: 135px;
   padding: 10px 20px;
   background: #ffffff;
   border: 1px solid #dddddd;
   border-bottom: 0;
+  flex-shrink: 0;
 }
 .graph-tools .switch {
-  position: absolute;
-  left: 10px;
-  top: 137px;
-  height: 26px;
-  line-height: 24px;
-  padding: 0 20px;
   color: rgba(0, 0, 0, 0.33);
   font-style: italic;
-  background: #ebebeb;
-  border: 1px solid #dddddd;
-  border-top: 0;
   text-decoration: none;
 }
-.graph-tools .switch:hover {
-  background: #e6e6e6;
-}
-.graph-tools .switch i {
-  font-size: 130%;
-  margin-top: 5px;
+.graph-tools .switch span {
+  font-style: normal;
   opacity: 0.7;
   float: right !important;
 }
-.graph-tools .switch i.rotated {
-  transform: rotate(180deg);
+.graph-tools .switch span.down::before {
+  content: '\25BC';
 }
-.graph-tools .extended {
-  position: absolute;
-  left: 10px;
-  top: 162px;
-  bottom: 10px;
-  padding: 10px;
-  background: #ffffff;
+.graph-tools .switch span.up::before {
+  content: '\25B2';
+}
+.graph-tools .switch-container {
+  flex-shrink: 0;
+  padding: 5px 20px;
+  background: #ebebeb;
   border: 1px solid #dddddd;
-  border-top-color: #ebebeb;
-  overflow-y: auto;
+  border-top: 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.graph-tools .switch-container:hover {
+  background: #e6e6e6;
+}
+.graph-tools .switch-container[extended="true"] {
+  border-bottom: 0;
 }
 .graph-tools .fabric {
   margin-top: 10px;
@@ -215,7 +229,16 @@
   font-style: italic;
 }
 .graph-tools .listing {
-  margin-bottom: 10px;
+  padding: 10px;
+  background: white;
+  border: 1px solid #dddddd;
+  border-top: 0;
+  overflow-y: auto;
+}
+.graph-tools .listing ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 .graph-tools .listing li {
   padding: 5px 5px;
@@ -248,4 +271,17 @@
 }
 .graph-tools .listing li:hover i {
   color: #3098d8;
+}
+.graph-tools .listing li:hover .remove-entity {
+  display: block;
+}
+.graph-tools .listing .remove-entity {
+  position: absolute;
+  right: 20px;
+  font-weight: bold;
+  font-size: 20px;
+  line-height: 17px;
+  cursor: pointer;
+  color: #c4434b;
+  display: none;
 }
