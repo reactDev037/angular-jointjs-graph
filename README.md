@@ -16,8 +16,7 @@ in your project, include it in your `bower.json` manifest as dependency:
 
 Depending on your build process, you may need to include the scripts the projects depends on manually 
 in your main file. The compiled project scripts and styles are located under `dist/scripts` and
-`dist/styles` respectively and come in minified versions as well. Please ensure that the assets in 
-`dist/images` are also served.
+`dist/styles` respectively and come in minified versions as well.
 
 If you are using Ruby on Rails, you can include the package in your project as a gem using `rails-assets`.
 In your Gemfile, include `rails-assets` as a gem source: 
